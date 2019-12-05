@@ -1,6 +1,12 @@
-export const createTaskEditTemplate = () => {
+import {months, getMinutes} from '../data.js';
+
+export const createTaskEditTemplate = (task) => {
+  const values = Object.values(task);
+  let repeatStatus = values.some((value) => {
+    return value;
+  });
   return (
-    `          <article class="card card--edit card--yellow card--repeat">
+    `          <article class="card__edit card--edit card--${task.color} ${repeatStatus ? `card--repeat` : ``}">
             <form class="card__form" method="get">
               <div class="card__inner">
                 <div class="card__color-bar">
@@ -15,7 +21,7 @@ export const createTaskEditTemplate = () => {
                       class="card__text"
                       placeholder="Start typing your text here..."
                       name="text"
-                    >Here is a card with filled data</textarea>
+                    >${task.description}</textarea>
                   </label>
                 </div>
 
@@ -23,26 +29,26 @@ export const createTaskEditTemplate = () => {
                   <div class="card__details">
                     <div class="card__dates">
                       <button class="card__date-deadline-toggle" type="button">
-                        date: <span class="card__date-status">yes</span>
+                        date: <span class="card__date-status">${repeatStatus ? `no` : `yes`}</span>
                       </button>
 
-                      <fieldset class="card__date-deadline">
+                      <fieldset class="card__date-deadline  ${repeatStatus ? `visually-hidden` : ``}">
                         <label class="card__input-deadline-wrap">
                           <input
                             class="card__date"
                             type="text"
                             placeholder=""
                             name="date"
-                            value="23 September 11:15 PM"
+                            value="${task.dueDate.getDate()} ${months[task.dueDate.getMonth()]} ${task.dueDate.getHours()}:${getMinutes(task.dueDate)}"
                           />
                         </label>
                       </fieldset>
 
                       <button class="card__repeat-toggle" type="button">
-                        repeat:<span class="card__repeat-status">yes</span>
+                        repeat:<span class="card__repeat-status">${repeatStatus ? `yes` : `no`}</span>
                       </button>
 
-                      <fieldset class="card__repeat-days">
+                      <fieldset class="card__repeat-days ${repeatStatus ? `` : `visually-hidden`}">
                         <div class="card__repeat-days-inner">
                           <input
                             class="visually-hidden card__repeat-day-input"
@@ -50,6 +56,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-mo-4"
                             name="repeat"
                             value="mo"
+                            ${task.repeatingDays[`mo`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-mo-4"
                             >mo</label
@@ -60,7 +67,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-tu-4"
                             name="repeat"
                             value="tu"
-                            checked
+                            ${task.repeatingDays[`tu`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-tu-4"
                             >tu</label
@@ -71,6 +78,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-we-4"
                             name="repeat"
                             value="we"
+                            ${task.repeatingDays[`we`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-we-4"
                             >we</label
@@ -81,6 +89,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-th-4"
                             name="repeat"
                             value="th"
+                            ${task.repeatingDays[`th`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-th-4"
                             >th</label
@@ -91,7 +100,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-fr-4"
                             name="repeat"
                             value="fr"
-                            checked
+                            ${task.repeatingDays[`fr`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-fr-4"
                             >fr</label
@@ -102,6 +111,7 @@ export const createTaskEditTemplate = () => {
                             name="repeat"
                             value="sa"
                             id="repeat-sa-4"
+                            ${task.repeatingDays[`sa`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-sa-4"
                             >sa</label
@@ -112,7 +122,7 @@ export const createTaskEditTemplate = () => {
                             id="repeat-su-4"
                             name="repeat"
                             value="su"
-                            checked
+                            ${task.repeatingDays[`su`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-su-4"
                             >su</label
