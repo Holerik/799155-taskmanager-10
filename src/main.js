@@ -49,6 +49,14 @@ const removeTasks = () => {
   }
 };
 
+const removeMoreButton = () => {
+  moreButton.removeEventListener(`click`, () => {
+    renderTaskElements(TASK_PER_PAGE);
+  });
+  document.querySelector(`.board`).
+  removeChild(document.querySelector(`.board`).querySelector(`.load-more`));
+};
+
 const repeatButtonClickHandler = () => {
   changeRepeatStatus(repeatButton);
 };
@@ -69,8 +77,8 @@ const renderTaskElements = (delta) => {
   repeatButton = document.querySelector(`.card__repeat-toggle`);
   repeatButton.addEventListener(`click`, repeatButtonClickHandler);
 
-  if (taskCount - delta < TASK_PER_PAGE) {
-    moreButton.classList.add(`visually-hidden`);
+  if (taskCount === tasksRenderConfig.lastTaskNumber) {
+    removeMoreButton();
   }
 };
 
@@ -102,7 +110,7 @@ const changeRepeatStatus = (button) => {
 };
 
 if (taskCount < TASK_PER_PAGE) {
-  moreButton.classList.add(`visually-hidden`);
+  removeMoreButton();
 }
 
 moreButton.addEventListener(`click`, () => {

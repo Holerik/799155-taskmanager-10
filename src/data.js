@@ -162,6 +162,6 @@ for (let title of filterNames) {
 }
 
 export const tasksRenderConfig = {
-  firstTaskNumber: 0,
+  firstTaskNumber: 1,
   lastTaskNumber: TASK_COUNT > TASK_PER_PAGE ? TASK_PER_PAGE : TASK_COUNT
 };
