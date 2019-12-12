@@ -1,6 +1,7 @@
 import {months, getMinutes} from '../data.js';
+import {createElement} from '../utils.js';
 
-export const createTaskEditTemplate = (task) => {
+const createTaskEditTemplate = (task) => {
   const values = Object.values(task);
   let repeatStatus = values.some((value) => {
     return value;
@@ -267,3 +268,25 @@ export const createTaskEditTemplate = (task) => {
           </article>`
   );
 };
+
+export default class TaskPopup {
+  constructor(task) {
+    this._element = null;
+    this._task = task;
+  }
+
+  getTemplate() {
+    return createTaskEditTemplate(this._task);
+  }
+
+  getElement() {
+    if (!this._element) {
+      this._element = createElement(this.getTemplate());
+    }
+    return this._element;
+  }
+
+  removeElement() {
+    this._element = null;
+  }
+}

@@ -1,4 +1,5 @@
 // data.js
+
 export const months = [`Января`, `Февраля`, `Марта`, `Апреля`, `Мая`, `Июня`, `Июля`, `Августа`,
   `Сентября`, `Октября`, `Ноября`, `Декабря`];
 
@@ -36,6 +37,7 @@ const cardColors = [`black`, `yellow`, `blue`, `green`, `pink`];
 const getRandomCardColor = () => {
   return cardColors[Math.floor(Math.random() * cardColors.length)];
 };
+
 const getRandomDate = () => {
   let date = new Date();
   let year = date.getFullYear();
@@ -51,6 +53,7 @@ const getRandomDate = () => {
   date = new Date(year, month, day, hours);
   return date;
 };
+
 const getRandomBolean = () => {
   return Math.floor(Math.random() * 2) > 0;
 };
@@ -148,11 +151,11 @@ export class FilterObject {
   }
 }
 
-const TASK_COUNT = 12;
+const TASKS_COUNT = 12;
 
-export const TASK_PER_PAGE = 8;
+export const TASKS_PER_PAGE = 8;
 
-for (let i = 0; i < TASK_COUNT; i++) {
+for (let i = 0; i < TASKS_COUNT; i++) {
   taskObjectsArray.push(new TaskObject());
 }
 
@@ -160,8 +163,3 @@ for (let title of filterNames) {
   const filter = new FilterObject(title);
   filtersArray.push(filter);
 }
-
-export const tasksRenderConfig = {
-  firstTaskNumber: 1,
-  lastTaskNumber: TASK_COUNT > TASK_PER_PAGE ? TASK_PER_PAGE : TASK_COUNT
-};

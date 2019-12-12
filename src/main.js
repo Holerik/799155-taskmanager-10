@@ -1,30 +1,66 @@
-import {taskObjectsArray, TASK_PER_PAGE, tasksRenderConfig} from './data.js';
-import {renderTemplate} from './utils.js';
-import {createTaskEditTemplate} from './components/task-edit.js';
-import {createTaskTemplate} from './components/task.js';
-import {createSiteMenuTemplate} from './components/site-menu.js';
-import {createLoadMoreButtonTemplate} from './components/more-button.js';
-import {createFilterTemplate} from './components/filter.js';
-import {createBoardTemplate} from './components/board.js';
+// main.js
 
-let taskCount = taskObjectsArray.length;
+import {taskObjectsArray, TASKS_PER_PAGE} from './data.js';
+import {renderElement, RenderPosition} from './utils.js';
+import BoardComponent from './components/board.js';
+import FilterComponent from './components/filter.js';
+import TaskComponent from './components/task.js';
+import TaskPopupComponent from './components/task-edit.js';
+import SiteMenuComponent from './components/site-menu.js';
+import MoreButtonComponent from './components/more-button.js';
+import NoTasksComponent from './components/no-tasks.js';
+
+let tasksCount = taskObjectsArray.length;
 let tasksRenderArray = [];
-let columnsCount = 0;
 let repeatButton = null;
+let lastRenderedTask = tasksCount > TASKS_PER_PAGE ? TASKS_PER_PAGE : tasksCount;
+const isAllTasksArchived = taskObjectsArray.every((task) => task.isArchive);
 
 const siteMainElement = document.querySelector(`.main`);
 const siteHeaderElement = siteMainElement.querySelector(`.main__control`);
 
-renderTemplate(siteHeaderElement, createSiteMenuTemplate(), `beforeend`);
-renderTemplate(siteMainElement, createFilterTemplate(), `beforeend`);
-renderTemplate(siteMainElement, createBoardTemplate(), `beforeend`);
-const taskListElement = siteMainElement.querySelector(`.board__tasks`);
+renderElement(siteHeaderElement, new SiteMenuComponent().getElement(), RenderPosition.BEFOREEND);
+renderElement(siteMainElement, new FilterComponent().getElement(), RenderPosition.BEFOREEND);
+const boardComponent = new BoardComponent();
+renderElement(siteMainElement, boardComponent.getElement(), RenderPosition.BEFOREEND);
+const taskListElement = boardComponent.getElement().querySelector(`.board__tasks`);
 
 const ajustTasksRenderArray = () => {
-  const first = tasksRenderConfig.firstTaskNumber;
-  const last = tasksRenderConfig.lastTaskNumber;
-  let tasksArray = taskObjectsArray.slice(first, last);
+  let tasksArray = taskObjectsArray.slice(0, lastRenderedTask);
   return tasksArray;
+};
+
+const renderTask = (task) => {
+  const taskComponent = new TaskComponent(task);
+  const taskPopupComponent = new TaskPopupComponent(task);
+  renderElement(taskListElement, taskComponent.getElement(), RenderPosition.BEFOREEND);
+
+  const replaceEditToTask = () => {
+    taskListElement.replaceChild(taskComponent.getElement(), taskPopupComponent.getElement());
+  };
+
+  const escKeyDownHandler = (evt) => {
+    const isEscKey = evt.key === `Escape` || evt.key === `Esc`;
+    if (isEscKey) {
+      repeatButton.removeEventListener(`click`, repeatButtonClickHandler);
+      replaceEditToTask();
+      document.removeEventListener(`keydown`, escKeyDownHandler);
+    }
+  };
+
+  const editButton = taskComponent.getElement().querySelector(`.card__btn--edit`);
+  editButton.addEventListener(`click`, () => {
+    taskListElement.replaceChild(taskPopupComponent.getElement(), taskComponent.getElement());
+    document.addEventListener(`keydown`, escKeyDownHandler);
+    repeatButton = taskPopupComponent.getElement().querySelector(`.card__repeat-toggle`);
+    repeatButton.addEventListener(`click`, repeatButtonClickHandler);
+  });
+
+  const editForm = taskPopupComponent.getElement().querySelector(`.card__form`);
+  editForm.addEventListener(`submit`, () => {
+    repeatButton.removeEventListener(`click`, repeatButtonClickHandler);
+    replaceEditToTask();
+  });
 };
 
 const removeTasks = () => {
@@ -32,10 +68,6 @@ const removeTasks = () => {
     repeatButton.removeEventListener(`click`, repeatButtonClickHandler);
   }
   let card = taskListElement.querySelector(`.card__edit`);
-  if (card) {
-    taskListElement.removeChild(card);
-  }
-  card = taskListElement.querySelector(`.card__shift`);
   if (card) {
     taskListElement.removeChild(card);
   }
@@ -50,44 +82,41 @@ const removeTasks = () => {
 };
 
 const removeMoreButton = () => {
-  moreButton.removeEventListener(`click`, () => {
-    renderTaskElements(TASK_PER_PAGE);
+  moreButton.getElement().removeEventListener(`click`, () => {
+    renderTaskElements(TASKS_PER_PAGE);
   });
-  document.querySelector(`.board`).
-  removeChild(document.querySelector(`.board`).querySelector(`.load-more`));
+  moreButton.getElement().remove();
+  moreButton.removeElement();
 };
 
 const repeatButtonClickHandler = () => {
   changeRepeatStatus(repeatButton);
 };
 
-const renderTaskElements = (delta) => {
-  tasksRenderConfig.lastTaskNumber += delta;
-  if (tasksRenderConfig.lastTaskNumber > taskCount) {
-    tasksRenderConfig.lastTaskNumber = taskCount;
+const renderTaskElements = (delta = 0) => {
+  lastRenderedTask += delta;
+  if (lastRenderedTask > tasksCount) {
+    lastRenderedTask = tasksCount;
   }
   removeTasks();
   tasksRenderArray = ajustTasksRenderArray();
-  columnsCount = Math.floor(document.body.clientWidth / 250);
-  tasksRenderArray[columnsCount - 1].leftMargin = true;
-  renderTemplate(taskListElement, createTaskEditTemplate(tasksRenderArray[0]), `beforeend`);
   for (let task of tasksRenderArray) {
-    renderTemplate(taskListElement, createTaskTemplate(task), `beforeend`);
+    renderTask(task);
   }
-  repeatButton = document.querySelector(`.card__repeat-toggle`);
-  repeatButton.addEventListener(`click`, repeatButtonClickHandler);
 
-  if (taskCount === tasksRenderConfig.lastTaskNumber) {
+  if (tasksCount === lastRenderedTask) {
     removeMoreButton();
   }
 };
 
-renderTaskElements(0);
+if (isAllTasksArchived) {
+  renderElement(boardComponent.getElement(), new NoTasksComponent().getElement(), RenderPosition.BEFOREEND);
+} else {
+  renderTaskElements();
+}
 
-const boardElement = siteMainElement.querySelector(`.board`);
-renderTemplate(boardElement, createLoadMoreButtonTemplate(), `beforeend`);
-
-const moreButton = document.querySelector(`.load-more`);
+const moreButton = new MoreButtonComponent();
+renderElement(boardComponent.getElement(), moreButton.getElement(), RenderPosition.BEFOREEND);
 
 const changeRepeatStatus = (button) => {
   const editCard = taskListElement.querySelector(`.card__edit`);
@@ -109,10 +138,10 @@ const changeRepeatStatus = (button) => {
   element.textContent = newText;
 };
 
-if (taskCount < TASK_PER_PAGE) {
+if (tasksCount < TASKS_PER_PAGE) {
   removeMoreButton();
 }
 
-moreButton.addEventListener(`click`, () => {
-  renderTaskElements(TASK_PER_PAGE);
+moreButton.getElement().addEventListener(`click`, () => {
+  renderTaskElements(TASKS_PER_PAGE);
 });
