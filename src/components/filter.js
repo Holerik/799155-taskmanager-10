@@ -1,13 +1,16 @@
-import {filtersArray} from '../data.js';
+// filter.js
 
-const getSectionTemplate = (filter) => {
+import {filtersArray} from '../data.js';
+import {createElement} from '../utils.js';
+
+const getFilterTemplate = (filter, isChecked) => {
   const section =
   `    <input
     type="radio"
     id="filter__${filter.title}"
     class="filter__input visually-hidden}"
     name="filter"
-    checked
+    ${isChecked ? `checked` : ``}
     disabled
     />
     <label for="filter__all" class="filter__label">
@@ -15,11 +18,30 @@ const getSectionTemplate = (filter) => {
   return section;
 };
 
-export const createFilterTemplate = () => {
+
+const createFiltersTemplate = () => {
   let filterTemplate = `      <section class="main__filter filter container">`;
-  for (let filter of filtersArray) {
-    const section = getSectionTemplate(filter);
-    filterTemplate += section;
-  }
+  filterTemplate += filtersArray.map((filter, index) => getFilterTemplate(filter, index === 0)).join(`\n`);
   return filterTemplate + `</section>`;
 };
+
+export default class Filter {
+  constructor() {
+    this._element = null;
+  }
+
+  getTemplate() {
+    return createFiltersTemplate();
+  }
+
+  getElement() {
+    if (!this._element) {
+      this._element = createElement(this.getTemplate());
+    }
+    return this._element;
+  }
+
+  removeElement() {
+    this._element = null;
+  }
+}

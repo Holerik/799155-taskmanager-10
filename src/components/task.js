@@ -1,4 +1,7 @@
+// task.js
+
 import {months, getMinutes} from '../data.js';
+import {createElement} from '../utils.js';
 
 const checkTaskIsDead = (task) => {
   let currDate = new Date();
@@ -30,13 +33,13 @@ const createTagsTemplate = (task) => {
   return tagsTemplate;
 };
 
-export const createTaskTemplate = (task) => {
+const createTaskTemplate = (task) => {
   const values = Object.values(task);
   let repeatStatus = values.some((value) => {
     return value;
   });
   return (
-    `          <article class="${task.leftMargin ? `card__shift` : `card`} card--${task.color} ${repeatStatus ? `card--repeat` : ``} ${checkTaskIsDead(task) ? `card--deadline` : ``}">
+    `          <article class="card card--${task.color} ${repeatStatus ? `card--repeat` : ``} ${checkTaskIsDead(task) ? `card--deadline` : ``}">
            <div class="card__form">
               <div class="card__inner">
                 <div class="card__control">
@@ -81,3 +84,25 @@ export const createTaskTemplate = (task) => {
          </article>`
   );
 };
+
+export default class Task {
+  constructor(task) {
+    this._element = null;
+    this._task = task;
+  }
+
+  getTemplate() {
+    return createTaskTemplate(this._task);
+  }
+
+  getElement() {
+    if (!this._element) {
+      this._element = createElement(this.getTemplate());
+    }
+    return this._element;
+  }
+
+  removeElement() {
+    this._element = null;
+  }
+}
