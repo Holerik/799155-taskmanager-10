@@ -1,5 +1,6 @@
 // more-button.js
-import {createElement} from '../utils.js';
+
+import AbstractComponent from './abstract.js';
 
 const createLoadMoreButtonTemplate = () => {
   return (
@@ -7,24 +8,17 @@ const createLoadMoreButtonTemplate = () => {
   );
 };
 
-export default class LoarMoreButton {
+export default class LoarMoreButton extends AbstractComponent {
   constructor() {
-    this._element = null;
+    super();
   }
 
   getTemplate() {
     return createLoadMoreButtonTemplate();
   }
 
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
-    }
-    return this._element;
-  }
-
-  removeElement() {
-    this._element = null;
+  setClickHandler(handler) {
+    this.getElement().addEventListener(`click`, handler);
   }
 }
 

@@ -1,5 +1,5 @@
 import {months, getMinutes} from '../data.js';
-import {createElement} from '../utils.js';
+import AbstractComponent from './abstract.js';
 
 const createTaskEditTemplate = (task) => {
   const values = Object.values(task);
@@ -269,24 +269,43 @@ const createTaskEditTemplate = (task) => {
   );
 };
 
-export default class TaskPopup {
+export default class TaskPopup extends AbstractComponent {
   constructor(task) {
-    this._element = null;
+    super();
     this._task = task;
+    this._submitHandler = null;
+    this._repeatHandler = null;
   }
 
   getTemplate() {
     return createTaskEditTemplate(this._task);
   }
 
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
-    }
-    return this._element;
+  setSubmitHandler(handler) {
+    this.getElement().querySelector(`.card__form`).
+    addEventListener(`submit`, handler);
+    this._submitHandler = handler;
   }
 
-  removeElement() {
-    this._element = null;
+  removeSubmitHandler() {
+    if (this._submitHandler) {
+      this.getElement().querySelector(`.card__form`).
+      removeEventListener(`submit`, this._submitHandler);
+      this._submitHandler = null;
+    }
+  }
+
+  setRepeatButtonClickHandler(handler) {
+    this.getElement().querySelector(`.card__repeat-toggle`).
+    addEventListener(`click`, handler);
+    this._repeatHandler = handler;
+  }
+
+  removeRepeatButtonClickHandler() {
+    if (this._repeatHandler) {
+      this.getElement().querySelector(`.card__repeat-toggle`).
+      removeEventListener(`click`, this._repeatHandler);
+      this._repeatHandler = null;
+    }
   }
 }
