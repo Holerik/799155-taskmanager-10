@@ -54,6 +54,29 @@ const getRandomDate = () => {
   return date;
 };
 
+export const dateFormatter = {
+  compare(date) {
+    return Date.parse(this.dateToISO(date)) > Date.parse(this.dateToISO(Date.now()));
+  },
+  dateToISO(date = Date.now()) {
+    return new Date(date).toISOString().substr(0, 10);
+  },
+  lastDay() {
+    const date = new Date();
+    return this.dateToISO(date.setDate(date.getDate() - 1));
+  },
+  dateLocal(date) {
+    return date ? date.split(`-`).reverse().join(`.`) : ``;
+  },
+  dateCustom(date) {
+    const d = new Date(date);
+    function pad(n) {
+      return n < 10 ? `0` + n : n;
+    }
+    return pad(d.getDate()) + `.` + pad(d.getMonth() + 1) + `.` + d.getFullYear();
+  }
+};
+
 const getRandomBolean = () => {
   return Math.floor(Math.random() * 2) > 0;
 };

@@ -109,7 +109,7 @@ const renderTaskElements = (delta = 0) => {
   }
 };
 
-if (isAllTasksArchived) {
+if (isAllTasksArchived || (tasksCount === 0)) {
   renderElement(boardComponent.getElement(), new NoTasksComponent().getElement(), RenderPosition.BEFOREEND);
 } else {
   renderTaskElements();

@@ -1,11 +1,12 @@
 // task.js
 
-import {months, getMinutes} from '../data.js';
+import {months, getMinutes, dateFormatter} from '../data.js';
 import {createElement} from '../utils.js';
 
 const checkTaskIsDead = (task) => {
-  let currDate = new Date();
-  return currDate.getTime() > task.dueDate.getTime();
+  // let currDate = new Date();
+  // return currDate.getTime() > task.dueDate.getTime();
+  return dateFormatter.compare(task.dueDate) === false;
 };
 
 const getTagTemplate = (tag) => {
