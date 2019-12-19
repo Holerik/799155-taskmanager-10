@@ -11,6 +11,7 @@ const createLoadMoreButtonTemplate = () => {
 export default class LoarMoreButton extends AbstractComponent {
   constructor() {
     super();
+    this._clickHandler = null;
   }
 
   getTemplate() {
@@ -19,6 +20,14 @@ export default class LoarMoreButton extends AbstractComponent {
 
   setClickHandler(handler) {
     this.getElement().addEventListener(`click`, handler);
+    this._clickHandler = handler;
+  }
+
+  removeClickHandle() {
+    if (this._clickHandler) {
+      this.getElement().removeEventListener(`click`, this._clickHandler);
+      this._clickHandler = null;
+    }
   }
 }
 

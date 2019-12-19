@@ -50,6 +50,7 @@ export default class BoardController {
   }
 
   removeMoreButton() {
+    this._moreButtonComponent.removeClickHandle();
     this._moreButtonComponent.getElement().remove();
     this._moreButtonComponent.removeElement();
   }
@@ -104,8 +105,8 @@ export default class BoardController {
     });
   }
 
-  renderTaskElements(taskPerPage) {
-    this.lastRenderedTask += taskPerPage;
+  renderTaskElements(tasksPerPage = 0) {
+    this.lastRenderedTask += tasksPerPage;
     if (this.lastRenderedTask > this._tasks.length) {
       this.lastRenderedTask = this._tasks.length;
     }
