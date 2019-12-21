@@ -42,10 +42,10 @@ const getRandomDate = () => {
   let date = new Date();
   let year = date.getFullYear();
   let month = date.getMonth();
-  let day = date.getDay();
-  let hours = Math.floor(Math.random() * 23);
+  let day = date.getDate();
+  let hours = date.getHours();// Math.floor(Math.random() * 23);
   let delta = Math.floor(Math.random() * 7);
-  if (delta > 4) {
+  if (delta > 3) {
     day += delta;
   } else {
     day -= delta;

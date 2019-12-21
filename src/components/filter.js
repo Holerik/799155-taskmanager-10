@@ -1,7 +1,7 @@
 // filter.js
 
 import {filtersArray} from '../data.js';
-import {createElement} from '../utils.js';
+import AbstractComponent from './abstract.js';
 
 const getFilterTemplate = (filter, isChecked) => {
   const section =
@@ -25,23 +25,12 @@ const createFiltersTemplate = () => {
   return filterTemplate + `</section>`;
 };
 
-export default class Filter {
+export default class Filter extends AbstractComponent {
   constructor() {
-    this._element = null;
+    super();
   }
 
   getTemplate() {
     return createFiltersTemplate();
-  }
-
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
-    }
-    return this._element;
-  }
-
-  removeElement() {
-    this._element = null;
   }
 }
