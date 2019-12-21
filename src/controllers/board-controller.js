@@ -16,7 +16,7 @@ export default class BoardController {
     this._moreButtonComponent = new MoreButtonComponent();
     this._lastRenderedTask = 0;
     this._taskListElement = this._container.getElement().querySelector(`.board__tasks`);
-    this._sortComponent.setController(this);
+    this._sortComponent.setSortTypeChangeHandler(this.renderTaskElements.bind(this));
   }
 
   removeTasks() {
