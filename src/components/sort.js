@@ -23,6 +23,7 @@ export class SortComponent extends AbstractComponent {
   constructor() {
     super();
     this._currentSortType = SortType.DEFAULT;
+    this._controller = null;
   }
 
   getTemplate() {
@@ -46,6 +47,9 @@ export class SortComponent extends AbstractComponent {
           return;
         }
         this._currentSortType = sortType;
+        if (this._controller) {
+          this._controller.renderTaskElements();
+        }
       });
     }
     return this._element;
@@ -53,6 +57,10 @@ export class SortComponent extends AbstractComponent {
 
   removeElement() {
     this._element = null;
+  }
+
+  setController(controller) {
+    this._controller = controller;
   }
 }
 

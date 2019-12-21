@@ -1,7 +1,7 @@
 // board-controller.js
 
 import NoTasksComponent from '../components/no-tasks.js';
-import {SortComponent, SortType} from '../components/sort.js';
+import {SortType} from '../components/sort.js';
 import MoreButtonComponent from '../components/more-button.js';
 import {renderElement, RenderPosition} from '../utils.js';
 import {TASKS_PER_PAGE} from '../data.js';
@@ -9,13 +9,14 @@ import TaskComponent from '../components/task.js';
 import TaskPopupComponent from '../components/task-edit.js';
 
 export default class BoardController {
-  constructor(container, tasks) {
+  constructor(container, sortComponent, tasks) {
     this._container = container;
     this._tasks = tasks;
-    this._sortComponent = new SortComponent();
+    this._sortComponent = sortComponent;
     this._moreButtonComponent = new MoreButtonComponent();
-    this.lastRenderedTask = 0;
+    this._lastRenderedTask = 0;
     this._taskListElement = this._container.getElement().querySelector(`.board__tasks`);
+    this._sortComponent.setController(this);
   }
 
   removeTasks() {
@@ -37,13 +38,15 @@ export default class BoardController {
     let sortedTasks = [];
     switch (this._sortComponent.currentSortType) {
       case SortType.DEFAULT:
-        sortedTasks = this._tasks.slice(0, this.lastRenderedTask);
+        sortedTasks = this._tasks.slice(0, this._lastRenderedTask);
         break;
-      case SortType.DATR_UP:
-        sortedTasks = this._tasks.slice().sort((left, right) => left.dueDate - right.dueDate);
+      case SortType.DATE_UP:
+        sortedTasks = this._tasks.slice().
+        sort((left, right) => left.dueDate - right.dueDate).slice(0, this._lastRenderedTask);
         break;
-      case SortType.DATR_DOWN:
-        sortedTasks = this._tasks.slice().sort((left, right) => right.dueDate - left.dueDate);
+      case SortType.DATE_DOWN:
+        sortedTasks = this._tasks.slice().
+        sort((left, right) => right.dueDate - left.dueDate).slice(0, this._lastRenderedTask);
         break;
     }
     return sortedTasks;
@@ -106,16 +109,16 @@ export default class BoardController {
   }
 
   renderTaskElements(tasksPerPage = 0) {
-    this.lastRenderedTask += tasksPerPage;
-    if (this.lastRenderedTask > this._tasks.length) {
-      this.lastRenderedTask = this._tasks.length;
+    this._lastRenderedTask += tasksPerPage;
+    if (this._lastRenderedTask > this._tasks.length) {
+      this._lastRenderedTask = this._tasks.length;
     }
     this.removeTasks();
     let tasksRenderArray = this.ajustTasksRenderArray();
     for (let task of tasksRenderArray) {
       this.renderTask(task);
     }
-    if (this._tasks.length === this.lastRenderedTask) {
+    if (this._tasks.length === this._lastRenderedTask) {
       this.removeMoreButton();
     }
   }

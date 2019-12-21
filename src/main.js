@@ -14,8 +14,9 @@ const siteHeaderElement = siteMainElement.querySelector(`.main__control`);
 renderElement(siteHeaderElement, new SiteMenuComponent(), RenderPosition.BEFOREEND);
 renderElement(siteMainElement, new FilterComponent(), RenderPosition.BEFOREEND);
 const sortComponent = new SortComponent();
-const container = new BoardComponent(sortComponent);
+const container = new BoardComponent();
 renderElement(siteMainElement, container, RenderPosition.BEFOREEND);
-const boardController = new BoardController(container, taskObjectsArray);
+renderElement(container.getElement(), sortComponent, RenderPosition.AFTERBEGIN);
+const boardController = new BoardController(container, sortComponent, taskObjectsArray);
 
 boardController.render();
