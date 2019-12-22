@@ -6,7 +6,7 @@ import BoardController from './controllers/board-controller.js';
 import BoardComponent from './components/board.js';
 import FilterComponent from './components/filter.js';
 import SiteMenuComponent from './components/site-menu.js';
-import {SortComponent} from './components/sort.js';
+import SortComponent from './components/sort.js';
 
 const siteMainElement = document.querySelector(`.main`);
 const siteHeaderElement = siteMainElement.querySelector(`.main__control`);
