@@ -19,10 +19,11 @@ const createSortTemplate = () => {
   );
 };
 
-export class SortComponent extends AbstractComponent {
+export default class Sort extends AbstractComponent {
   constructor() {
     super();
     this._currentSortType = SortType.DEFAULT;
+    this._sortTypeChangeHandler = null;
   }
 
   getTemplate() {
@@ -46,6 +47,9 @@ export class SortComponent extends AbstractComponent {
           return;
         }
         this._currentSortType = sortType;
+        if (this._sortTypeChangeHandler) {
+          this._sortTypeChangeHandler();
+        }
       });
     }
     return this._element;
@@ -53,6 +57,10 @@ export class SortComponent extends AbstractComponent {
 
   removeElement() {
     this._element = null;
+  }
+
+  setSortTypeChangeHandler(handler) {
+    this._sortTypeChangeHandler = handler;
   }
 }
 

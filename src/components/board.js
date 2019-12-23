@@ -2,10 +2,9 @@
 
 import AbstractComponent from './abstract.js';
 
-const createBoardTemplate = (sortComponent) => {
+const createBoardTemplate = () => {
   return (
     `      <section class="board container">
-${sortComponent.getTemplate()}
         <div class="board__tasks">
         </div>
       </section>`
@@ -13,12 +12,11 @@ ${sortComponent.getTemplate()}
 };
 
 export default class Board extends AbstractComponent {
-  constructor(sortComponent) {
+  constructor() {
     super();
-    this._sortComponent = sortComponent;
   }
 
   getTemplate() {
-    return createBoardTemplate(this._sortComponent);
+    return createBoardTemplate();
   }
 }
