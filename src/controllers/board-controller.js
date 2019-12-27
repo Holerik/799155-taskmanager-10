@@ -3,22 +3,43 @@
 import NoTasksComponent from '../components/no-tasks.js';
 import {SortType} from '../components/sort.js';
 import MoreButtonComponent from '../components/more-button.js';
-import {renderElement, RenderPosition} from '../utils.js';
-import {TASKS_PER_PAGE} from '../data.js';
-import TaskComponent from '../components/task.js';
-import TaskPopupComponent from '../components/task-edit.js';
-import TaskController from '../controllers/task-controller';
+import {renderElement, RenderPosition, remove} from '../utils.js';
+import {TASKS_PER_PAGE, tasksModel} from '../data.js';
+import TaskController, {Mode} from '../controllers/task-controller';
+import {FilterType} from '../components/filter.js';
 
 export default class BoardController {
-  constructor(container, sortComponent, tasks) {
+  constructor(container, sortComponent) {
     this._container = container;
-    this._tasks = tasks;
     this._sortComponent = sortComponent;
     this._moreButtonComponent = new MoreButtonComponent();
     this._lastRenderedTask = 0;
     this._taskListElement = this._container.getElement().querySelector(`.board__tasks`);
     this._sortComponent.setSortTypeChangeHandler(this._renderTaskElements.bind(this));
     this._showedTaskControllers = [];
+    this._changeData = this._changeData.bind(this);
+    this._changeView = this._changeView.bind(this);
+    this._moreButtonComponent.setClickHandler((evt) => {
+      evt.preventDefault();
+      this._renderTaskElements(TASKS_PER_PAGE);
+    });
+    this._createdTaskController = null;
+    this._currentFilterType = FilterType.ALL;
+  }
+
+  setFilterType(filter) {
+    if (filter === this._currentFilterType) {
+      return;
+    }
+    this._currentFilterType = filter;
+    this._renderTaskElements();
+  }
+
+  createTaskController() {
+    if (this._createdTaskController) {
+      return;
+    }
+    this._createdTaskController = new TaskController(this._taskListElement, this._changeData, this._changeView);
   }
 
   _removeTasks() {
@@ -27,18 +48,20 @@ export default class BoardController {
   }
 
   _ajustTasksRenderArray() {
+    tasksModel.setFilterType(this._currentFilterType);
+    let tasksByFilter = tasksModel.getTasks();
     let sortedTasks = [];
     switch (this._sortComponent.currentSortType) {
       case SortType.DEFAULT:
-        sortedTasks = this._tasks.slice(0, this._lastRenderedTask);
+        sortedTasks = tasksByFilter;
         break;
       case SortType.DATE_UP:
-        sortedTasks = this._tasks.slice().
-        sort((left, right) => left.dueDate - right.dueDate).slice(0, this._lastRenderedTask);
+        sortedTasks = tasksByFilter.slice().
+        sort((left, right) => left.dueDate - right.dueDate);
         break;
       case SortType.DATE_DOWN:
-        sortedTasks = this._tasks.slice().
-        sort((left, right) => right.dueDate - left.dueDate).slice(0, this._lastRenderedTask);
+        sortedTasks = tasksByFilter.slice().
+        sort((left, right) => right.dueDate - left.dueDate);
         break;
     }
     return sortedTasks;
@@ -46,84 +69,44 @@ export default class BoardController {
 
   _removeMoreButton() {
     this._moreButtonComponent.removeClickHandle();
-    this._moreButtonComponent.getElement().remove();
-    this._moreButtonComponent.removeElement();
+    remove(this._moreButtonComponent);
   }
 
-  _renderTask(task) {
-    const taskListElement = this._container.getElement().querySelector(`.board__tasks`);
-    const taskComponent = new TaskComponent(task);
-    const taskPopupComponent = new TaskPopupComponent(task);
-    renderElement(taskListElement, taskComponent, RenderPosition.BEFOREEND);
+  _changeData(taskController, oldTask, newTask) {
+    tasksModel.updateTask(oldTask, newTask);
+    taskController.render(newTask, Mode.DEFAULT);
+  }
 
-    const repeatButtonClickHandler = () => {
-      const editCard = this._taskListElement.querySelector(`.card__edit`);
-      const element = editCard.querySelector(`.card__repeat-status`);
-      const cardDate = editCard.querySelector(`.card__date-deadline`);
-      const cardRepeatDays = this._taskListElement.querySelector(`.card__repeat-days`);
-      let newText = ``;
-      if (element.textContent.toLowerCase().indexOf(`yes`) > -1) {
-        newText = `no`;
-        cardDate.classList.remove(`visually-hidden`);
-        cardRepeatDays.classList.add(`visually-hidden`);
-        editCard.classList.remove(`card--repeat`);
-      } else {
-        newText = `yes`;
-        cardDate.classList.add(`visually-hidden`);
-        cardRepeatDays.classList.remove(`visually-hidden`);
-        editCard.classList.add(`card--repeat`);
-      }
-      element.textContent = newText;
-    };
-
-    const replaceEditToTask = () => {
-      taskListElement.replaceChild(taskComponent.getElement(), taskPopupComponent.getElement());
-    };
-
-    const escKeyDownHandler = (evt) => {
-      const isEscKey = evt.key === `Escape` || evt.key === `Esc`;
-      if (isEscKey) {
-        taskPopupComponent.removeRepeatButtonClickHandler();
-        replaceEditToTask();
-        document.removeEventListener(`keydown`, escKeyDownHandler);
-      }
-    };
-
-    taskComponent.setEditButtonClickHandler(() => {
-      taskListElement.replaceChild(taskPopupComponent.getElement(), taskComponent.getElement());
-      document.addEventListener(`keydown`, escKeyDownHandler);
-      taskPopupComponent.setRepeatButtonClickHandler(repeatButtonClickHandler);
-    });
-
-    taskPopupComponent.setSubmitHandler(() => {
-      replaceEditToTask();
-    });
-    const taskController = new TaskController(taskComponent, taskPopupComponent);
-    return taskController;
+  _changeView() {
+    this._showedTaskControllers.forEach((taskController) => taskController.setDefaultView());
   }
 
   _renderTaskElements(tasksPerPage = 0) {
-    this._lastRenderedTask += tasksPerPage;
-    if (this._lastRenderedTask > this._tasks.length) {
-      this._lastRenderedTask = this._tasks.length;
-    }
     this._removeTasks();
+
+    this._lastRenderedTask += tasksPerPage;
     let tasksRenderArray = this._ajustTasksRenderArray();
-    for (let task of tasksRenderArray) {
-      this._showedTaskControllers.push(this._renderTask(task));
+    let length = tasksRenderArray.length;
+    if (this._lastRenderedTask > length) {
+      this._lastRenderedTask = length;
     }
-    if (this._tasks.length === this._lastRenderedTask) {
+
+    tasksRenderArray.slice(0, this._lastRenderedTask).forEach((task) => {
+      const taskController = new TaskController(this._taskListElement, this._changeData, this._changeView);
+      taskController.render(task, Mode.DEFAULT);
+      this._showedTaskControllers.push(taskController);
+    });
+
+    length = this._showedTaskControllers.length;
+    if (tasksRenderArray.length === this._lastRenderedTask) {
       this._removeMoreButton();
     }
   }
 
   // рисуем содержимое контроллера
   render() {
-    this._moreButtonComponent.setClickHandler(() => {
-      this._renderTaskElements(TASKS_PER_PAGE);
-    });
-    const isAllTasksArchived = this._tasks.every((task) => task.isArchive);
-    if (isAllTasksArchived || (this._tasks.length === 0)) {
+    const isAllTasksArchived = tasksModel.getTasksAll().every((task) => task.isArchive);
+    if (isAllTasksArchived || (tasksModel.getTasksAll().length === 0)) {
       renderElement(this._container.getElement(), new NoTasksComponent(), RenderPosition.BEFOREEND);
     } else {
       this._renderTaskElements(TASKS_PER_PAGE);

@@ -1,5 +1,7 @@
 // data.js
 
+import {FilterType} from './components/filter.js';
+
 export const months = [`Января`, `Февраля`, `Марта`, `Апреля`, `Мая`, `Июня`, `Июля`, `Августа`,
   `Сентября`, `Октября`, `Ноября`, `Декабря`];
 
@@ -33,9 +35,17 @@ const getRandomTagsList = (listSize) => {
   return list;
 };
 
-const cardColors = [`black`, `yellow`, `blue`, `green`, `pink`];
+export const COLOR = {
+  BLACK: `black`,
+  YELLOW: `yellow`,
+  BLUE: `blue`,
+  GREEN: `green`,
+  PINK: `pink`,
+};
+
 const getRandomCardColor = () => {
-  return cardColors[Math.floor(Math.random() * cardColors.length)];
+  const colors = Object.values(COLOR);
+  return colors[Math.floor(Math.random() * colors.length)];
 };
 
 const getRandomDate = () => {
@@ -43,7 +53,7 @@ const getRandomDate = () => {
   let year = date.getFullYear();
   let month = date.getMonth();
   let day = date.getDate();
-  let hours = date.getHours();// Math.floor(Math.random() * 23);
+  let hours = date.getHours();
   let delta = Math.floor(Math.random() * 7);
   if (delta > 3) {
     day += delta;
@@ -98,81 +108,33 @@ export class TaskObject {
     this.color = getRandomCardColor();
     this.isFavorite = getRandomBolean();
     this.isArchive = getRandomBolean();
-    this.leftMargin = false;
+  }
+
+  static clone(data) {
+    const task = new TaskObject();
+    task.description = data[`description`];
+    task.dueDate = data[`dueDate`];
+    task.repeatingDays = data[`repeatingDays`];
+    task.tags = new Set(data[`tags`]);
+    task.color = data[`color`];
+    task.isFavorite = Boolean(data[`isFavorite`]);
+    task.isArchive = Boolean(data[`isArchive`]);
+    return task;
   }
 }
 
 export const taskObjectsArray = [];
 
-export const filterNames = [`all`, `overdue`, `today`, `favorites`, `repeating`, `tags`, `archive`];
-
-const getCount = (fn) => {
-  let count = 0;
-  for (let task of taskObjectsArray) {
-    if (fn(task)) {
-      count++;
-    }
-  }
-  return count;
-};
-
-const getCountOfTasksByFilter = (title) => {
-  let count = 0;
-  switch (title) {
-    case filterNames[0]:
-      count = taskObjectsArray.length;
-      break;
-    case filterNames[5]:
-      count = getCount((task) => {
-        return task.tags.size > 0;
-      });
-      break;
-    case filterNames[3]:
-      count = getCount((task) => {
-        return task.isFavorite;
-      });
-      break;
-    case filterNames[6]:
-      count = getCount((task) => {
-        return task.isArchive;
-      });
-      break;
-    case filterNames[2]:
-      {
-        const today = new Date();
-        count = getCount((task) => {
-          return today.getDay() === task.dueDate.getDay();
-        });
-      }
-      break;
-    case filterNames[1]:
-      {
-        const today = new Date();
-        count = getCount((task) => {
-          return today.getTime() > task.dueDate.getTime();
-        });
-      }
-      break;
-    case filterNames[4]:
-      count = getCount((task) => {
-        const values = Object.values(task.repeatingDays);
-        return values.some((value) => {
-          return value;
-        });
-      });
-      break;
-  }
-  return count;
-};
-
 export const filtersArray = [];
 
-export class FilterObject {
-  constructor(title) {
-    this.title = title;
-    this.count = getCountOfTasksByFilter(title, taskObjectsArray);
+export const updateTask = (oldTask, newTask) => {
+  const index = taskObjectsArray.findIndex((task) => task === oldTask);
+  if (index === -1) {
+    return false;
   }
-}
+  taskObjectsArray = [].concat(taskObjectsArray.slice(0, index), newTask, taskObjectsArray.slice(index + 1));
+  return true;
+};
 
 const TASKS_COUNT = 12;
 
@@ -182,7 +144,122 @@ for (let i = 0; i < TASKS_COUNT; i++) {
   taskObjectsArray.push(new TaskObject());
 }
 
-for (let title of filterNames) {
+const getArchiveTasks = (tasks) => {
+  return tasks.filter((task) => task.isArchive);
+};
+
+const getNotArchiveTasks = (tasks) => {
+  return tasks.filter((task) => !task.isArchive);
+};
+
+const getFavoriteTasks = (tasks) => {
+  return tasks.filter((task) => task.isFavorite);
+};
+
+const isOneDay = (date1, date2) => {
+  return date1.getDate() === date2.getDate();
+};
+
+const isOverdueDate = (dueDate, date) => {
+  return dueDate < date;
+};
+
+const getOverdueTasks = (tasks, date) => {
+  return tasks.filter((task) => {
+    const dueDate = task.dueDate;
+
+    if (!dueDate) {
+      return false;
+    }
+
+    return isOverdueDate(dueDate, date);
+  });
+};
+
+const isRepeating = (repeatingDays) => {
+  return Object.values(repeatingDays).some(Boolean);
+};
+
+const getRepeatingTasks = (tasks) => {
+  return tasks.filter((task) => isRepeating(task.repeatingDays));
+};
+
+const getTasksWithHashtags = (tasks) => {
+  return tasks.filter((task) => task.tags.size);
+};
+
+const getTasksInOneDay = (tasks, date) => {
+  return tasks.filter((task) => isOneDay(task.dueDate, date));
+};
+
+export const getTasksByFilter = (tasks, filterType) => {
+  const nowDate = new Date();
+
+  switch (filterType) {
+    case FilterType.ALL:
+      return tasks;// getNotArchiveTasks(tasks);
+    case FilterType.ARCHIVE:
+      return getArchiveTasks(tasks);
+    case FilterType.FAVORITES:
+      return getFavoriteTasks(getNotArchiveTasks(tasks));
+    case FilterType.OVERDUE:
+      return getOverdueTasks(getNotArchiveTasks(tasks), nowDate);
+    case FilterType.REPEATING:
+      return getRepeatingTasks(getNotArchiveTasks(tasks));
+    case FilterType.TAGS:
+      return getTasksWithHashtags(getNotArchiveTasks(tasks));
+    case FilterType.TODAY:
+      return getTasksInOneDay(getNotArchiveTasks(tasks), nowDate);
+  }
+
+  return tasks;
+};
+
+export class FilterObject {
+  constructor(title) {
+    this.title = title;
+    this.isChecked = false;
+    this.count = getTasksByFilter(taskObjectsArray, title).length;
+  }
+}
+
+for (let title of Object.values(FilterType)) {
   const filter = new FilterObject(title);
   filtersArray.push(filter);
 }
+
+export class Model {
+  constructor() {
+    this._tasks = [];
+    this._currentFilterType = FilterType.ALL;
+  }
+
+  getTasks() {
+    return getTasksByFilter(this._tasks, this._currentFilterType);
+  }
+
+  getTasksAll() {
+    return this._tasks;
+  }
+
+  setTasks(tasks) {
+    this._tasks = Array.from(tasks);
+  }
+
+  setFilterType(filterType) {
+    this._currentFilterType = filterType;
+  }
+
+  updateTask(oldTask, newTask) {
+    const index = this._tasks.findIndex((task) => task === oldTask);
+    if (index === -1) {
+      return false;
+    }
+    this._tasks = [].concat(this._tasks.slice(0, index), newTask, this._tasks.slice(index + 1));
+    return true;
+  }
+}
+
+export const tasksModel = new Model();
+
+tasksModel.setTasks(taskObjectsArray);
