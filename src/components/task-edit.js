@@ -1,13 +1,22 @@
 import {months, getMinutes} from '../data.js';
-import AbstractComponent from './abstract.js';
+import AbstractSmartComponent from './abstract-smart.js';
+import flatpickr from 'flatpickr';
+import 'flatpickr/dist/flatpickr.min.css';
+import 'flatpickr/dist/themes/light.css';
 
-const createTaskEditTemplate = (task) => {
-  const values = Object.values(task);
-  let repeatStatus = values.some((value) => {
-    return value;
-  });
+const MIN_DESCRIPTION_LENGTH = 1;
+const MAX_DESCRIPTION_LENGTH = 140;
+
+const isAllowableDescriptionLength = (description) => {
+  const length = description.length;
+
+  return length >= MIN_DESCRIPTION_LENGTH &&
+    length <= MAX_DESCRIPTION_LENGTH;
+};
+
+const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays) => {
   return (
-    `          <article class="card__edit card--edit card--${task.color} ${repeatStatus ? `card--repeat` : ``}">
+    `          <article class="card__edit card--edit card--${task.color} ${isRepeatingTask ? `card--repeat` : ``}">
             <form class="card__form" method="get">
               <div class="card__inner">
                 <div class="card__color-bar">
@@ -30,10 +39,10 @@ const createTaskEditTemplate = (task) => {
                   <div class="card__details">
                     <div class="card__dates">
                       <button class="card__date-deadline-toggle" type="button">
-                        date: <span class="card__date-status">${repeatStatus ? `no` : `yes`}</span>
+                        date: <span class="card__date-status">${isDateShowing ? `no` : `yes`}</span>
                       </button>
 
-                      <fieldset class="card__date-deadline  ${repeatStatus ? `visually-hidden` : ``}">
+                      <fieldset class="card__date-deadline  ${isDateShowing ? `visually-hidden` : ``}">
                         <label class="card__input-deadline-wrap">
                           <input
                             class="card__date"
@@ -46,10 +55,10 @@ const createTaskEditTemplate = (task) => {
                       </fieldset>
 
                       <button class="card__repeat-toggle" type="button">
-                        repeat:<span class="card__repeat-status">${repeatStatus ? `yes` : `no`}</span>
+                        repeat:<span class="card__repeat-status">${isRepeatingTask ? `yes` : `no`}</span>
                       </button>
 
-                      <fieldset class="card__repeat-days ${repeatStatus ? `` : `visually-hidden`}">
+                      <fieldset class="card__repeat-days ${isRepeatingTask ? `` : `visually-hidden`}">
                         <div class="card__repeat-days-inner">
                           <input
                             class="visually-hidden card__repeat-day-input"
@@ -57,7 +66,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-mo-4"
                             name="repeat"
                             value="mo"
-                            ${task.repeatingDays[`mo`] ? `checked` : ``}
+                            ${repeatingDays[`mo`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-mo-4"
                             >mo</label
@@ -68,7 +77,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-tu-4"
                             name="repeat"
                             value="tu"
-                            ${task.repeatingDays[`tu`] ? `checked` : ``}
+                            ${repeatingDays[`tu`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-tu-4"
                             >tu</label
@@ -79,7 +88,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-we-4"
                             name="repeat"
                             value="we"
-                            ${task.repeatingDays[`we`] ? `checked` : ``}
+                            ${repeatingDays[`we`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-we-4"
                             >we</label
@@ -90,7 +99,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-th-4"
                             name="repeat"
                             value="th"
-                            ${task.repeatingDays[`th`] ? `checked` : ``}
+                            ${repeatingDays[`th`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-th-4"
                             >th</label
@@ -101,7 +110,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-fr-4"
                             name="repeat"
                             value="fr"
-                            ${task.repeatingDays[`fr`] ? `checked` : ``}
+                            ${repeatingDays[`fr`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-fr-4"
                             >fr</label
@@ -112,7 +121,7 @@ const createTaskEditTemplate = (task) => {
                             name="repeat"
                             value="sa"
                             id="repeat-sa-4"
-                            ${task.repeatingDays[`sa`] ? `checked` : ``}
+                            ${repeatingDays[`sa`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-sa-4"
                             >sa</label
@@ -123,7 +132,7 @@ const createTaskEditTemplate = (task) => {
                             id="repeat-su-4"
                             name="repeat"
                             value="su"
-                            ${task.repeatingDays[`su`] ? `checked` : ``}
+                            ${repeatingDays[`su`] ? `checked` : ``}
                           />
                           <label class="card__repeat-day" for="repeat-su-4"
                             >su</label
@@ -269,43 +278,101 @@ const createTaskEditTemplate = (task) => {
   );
 };
 
-export default class TaskPopup extends AbstractComponent {
+export default class TaskPopup extends AbstractSmartComponent {
   constructor(task) {
     super();
     this._task = task;
-    this._submitHandler = null;
-    this._repeatHandler = null;
+    this._isDateShowing = !!task.dueDate;
+    this._isRepeatingTask = Object.values(task.repeatingDays).some(Boolean);
+    this._activeRepeatingDays = Object.assign({}, task.repeatingDays);
+    this._currentDescription = task.description;
+    this._submitClickHandler = null;
+    this._flatpickr = null;
+    this._deleteClickHandler = null;
+    this._subscribeOnEvents();
   }
 
   getTemplate() {
-    return createTaskEditTemplate(this._task);
+    return createTaskEditTemplate(this._task, this._isDateShowing,
+        this._isRepeatingTask, this._activeRepeatingDays);
   }
 
   setSubmitHandler(handler) {
     this.getElement().querySelector(`.card__form`).
     addEventListener(`submit`, handler);
-    this._submitHandler = handler;
+    this._submitClickHandler = handler;
   }
 
-  removeSubmitHandler() {
-    if (this._submitHandler) {
-      this.getElement().querySelector(`.card__form`).
-      removeEventListener(`submit`, this._submitHandler);
-      this._submitHandler = null;
+  setDeleteButtonClickHandler(handler) {
+    this.getElement().querySelector(`.card__delete`).
+    addEventListener(`click`, handler);
+    this._deleteClickHandler = handler;
+  }
+
+  recoveryListeners() {
+    this.setSubmitHandler(this._submitClickHandler);
+    this._subscribeOnEvents();
+  }
+
+  reset() {
+    this._isDateShowing = !!this._task.dueDate;
+    this._isRepeatingTask = Object.values(this._task.repeatingDays).some(Boolean);
+    this._activeRepeatingDays = Object.assign({}, this._task.repeatingDays);
+    this._currentDescription = this._task.description;
+    this.rerender();
+  }
+
+  rerender() {
+    super.rerender();
+    this._applyFlatpickr();
+  }
+
+  _applyFlatpickr() {
+    if (this._flatpickr) {
+      // При своем создании `flatpickr` дополнительно создает вспомогательные DOM-элементы.
+      // Что бы их удалять, нужно вызывать метод `destroy` у созданного инстанса `flatpickr`.
+      this._flatpickr.destroy();
+      this._flatpickr = null;
+    }
+
+    if (this._isDateShowing) {
+      const dateElement = this.getElement().querySelector(`.card__date`);
+      this._flatpickr = flatpickr(dateElement, {
+        altInput: true,
+        allowInput: true,
+        defaultDate: this._task.dueDate,
+      });
     }
   }
 
-  setRepeatButtonClickHandler(handler) {
-    this.getElement().querySelector(`.card__repeat-toggle`).
-    addEventListener(`click`, handler);
-    this._repeatHandler = handler;
-  }
+  _subscribeOnEvents() {
+    const element = this.getElement();
 
-  removeRepeatButtonClickHandler() {
-    if (this._repeatHandler) {
-      this.getElement().querySelector(`.card__repeat-toggle`).
-      removeEventListener(`click`, this._repeatHandler);
-      this._repeatHandler = null;
+    element.querySelector(`.card__text`)
+      .addEventListener(`input`, (evt) => {
+        this._currentDescription = evt.target.value;
+        const saveButton = this.getElement().querySelector(`.card__save`);
+        saveButton.disabled = !isAllowableDescriptionLength(this._currentDescription);
+      });
+
+    element.querySelector(`.card__date-deadline-toggle`)
+      .addEventListener(`click`, () => {
+        this._isDateShowing = !this._isDateShowing;
+        this.rerender();
+      });
+
+    element.querySelector(`.card__repeat-toggle`)
+      .addEventListener(`click`, () => {
+        this._isRepeatingTask = !this._isRepeatingTask;
+        this.rerender();
+      });
+
+    const repeatDays = element.querySelector(`.card__repeat-days`);
+    if (repeatDays) {
+      repeatDays.addEventListener(`change`, (evt) => {
+        this._activeRepeatingDays[evt.target.value] = evt.target.checked;
+        this.rerender();
+      });
     }
   }
 }
