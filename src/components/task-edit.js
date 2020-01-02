@@ -1,6 +1,5 @@
-import {months, getMinutes} from '../data.js';
 import AbstractSmartComponent from './abstract-smart.js';
-import {formatTime, formatDate, isRepeating, isOverdueDate} from '../date.js';
+import {formatTime, formatDate} from '../date.js';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'flatpickr/dist/themes/light.css';
