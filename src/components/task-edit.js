@@ -1,5 +1,6 @@
 import {months, getMinutes} from '../data.js';
 import AbstractSmartComponent from './abstract-smart.js';
+import {formatTime, formatDate, isRepeating, isOverdueDate} from '../date.js';
 import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import 'flatpickr/dist/themes/light.css';
@@ -15,6 +16,9 @@ const isAllowableDescriptionLength = (description) => {
 };
 
 const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays) => {
+  const date = (isDateShowing && task.dueDate) ? formatDate(task.dueDate) : ``;
+  const time = (isDateShowing && task.dueDate) ? formatTime(task.dueDate) : ``;
+
   return (
     `          <article class="card__edit card--edit card--${task.color} ${isRepeatingTask ? `card--repeat` : ``}">
             <form class="card__form" method="get">
@@ -42,14 +46,14 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                         date: <span class="card__date-status">${isDateShowing ? `no` : `yes`}</span>
                       </button>
 
-                      <fieldset class="card__date-deadline  ${isDateShowing ? `visually-hidden` : ``}">
+                      <fieldset class="card__date-deadline">
                         <label class="card__input-deadline-wrap">
                           <input
                             class="card__date"
                             type="text"
                             placeholder=""
                             name="date"
-                            value="${task.dueDate.getDate()} ${months[task.dueDate.getMonth()]} ${task.dueDate.getHours()}:${getMinutes(task.dueDate)}"
+                            value="${date} ${time}"
                           />
                         </label>
                       </fieldset>
@@ -295,6 +299,14 @@ export default class TaskPopup extends AbstractSmartComponent {
   getTemplate() {
     return createTaskEditTemplate(this._task, this._isDateShowing,
         this._isRepeatingTask, this._activeRepeatingDays);
+  }
+
+  removeElement() {
+    if (this._flatpickr) {
+      this._flatpickr.destroy();
+      this._flatpickr = null;
+    }
+    super.removeElement();
   }
 
   setSubmitHandler(handler) {
