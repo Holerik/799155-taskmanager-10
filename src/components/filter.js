@@ -21,7 +21,7 @@ const getFilterTemplate = (filter) => {
     class="filter__input visually-hidden}"
     name="filter"
     ${filter.isChecked ? `checked` : ``}
-    disabled
+    ${filter.isDisabled ? `disabled` : ``}
     />
     <label for="filter__${filter.title}" class="filter__label">
     ${filter.title} <span class="filter__${filter.title}-count">${filter.count}</span></label>`;
@@ -39,8 +39,9 @@ export default class Filter extends AbstractComponent {
   constructor(filters) {
     super();
     this._filters = filters;
-    this._currentFilterType = FilterType.ALL;
+    this._currentFilterType = filters.find((filter) => filter.isChecked).title;
     this._filterTypeChangeHandler = null;
+    this._filterClickHandle = this._filterClickHandle.bind(this);
   }
 
   getTemplate() {
@@ -51,25 +52,27 @@ export default class Filter extends AbstractComponent {
     this._filterTypeChangeHandler = handler;
   }
 
+  _filterClickHandle(evt) {
+    evt.preventDefault();
+    if (evt.target.tagName !== `LABEL`) {
+      return;
+    }
+    const title = evt.target.firstChild.nodeValue;
+    const values = Object.values(FilterType);
+    const filterType = values[values.findIndex((value) => title.indexOf(value) > -1)];
+    if (this._currentFilterType === filterType) {
+      return;
+    }
+    this._currentFilterType = filterType;
+    if (this._filterTypeChangeHandler) {
+      this._filterTypeChangeHandler(filterType);
+    }
+  }
+
   getElement() {
     if (!this._element) {
       this._element = createElement(this.getTemplate());
-      this._element.addEventListener(`click`, (evt) => {
-        evt.preventDefault();
-        if (evt.target.tagName !== `INPUT`) {
-          return;
-        }
-        const title = evt.target.textContent;
-        const values = Object.values(FilterType);
-        const filterType = values[values.indexOf((value) => title.indexOf(value) > -1)];
-        if (this._currentFilterType === filterType) {
-          return;
-        }
-        this._currentFilterType = filterType;
-        if (this._filterTypeChangeHandler) {
-          this._filterTypeChangeHandler(filterType);
-        }
-      });
+      this._element.addEventListener(`click`, this._filterClickHandle);
     }
     return this._element;
   }

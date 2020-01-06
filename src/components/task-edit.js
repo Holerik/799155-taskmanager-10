@@ -1,3 +1,6 @@
+// task-edit.js
+
+import he from 'he';
 import AbstractSmartComponent from './abstract-smart.js';
 import {formatTime, formatDate} from '../date.js';
 import flatpickr from 'flatpickr';
@@ -17,6 +20,7 @@ const isAllowableDescriptionLength = (description) => {
 const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays) => {
   const date = (isDateShowing && task.dueDate) ? formatDate(task.dueDate) : ``;
   const time = (isDateShowing && task.dueDate) ? formatTime(task.dueDate) : ``;
+  const description = he.encode(task.description);
 
   return (
     `          <article class="card__edit card--edit card--${task.color} ${isRepeatingTask ? `card--repeat` : ``}">
@@ -34,7 +38,7 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                       class="card__text"
                       placeholder="Start typing your text here..."
                       name="text"
-                    >${task.description}</textarea>
+                    >${description}</textarea>
                   </label>
                 </div>
 
@@ -42,7 +46,7 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                   <div class="card__details">
                     <div class="card__dates">
                       <button class="card__date-deadline-toggle" type="button">
-                        date: <span class="card__date-status">${isDateShowing ? `no` : `yes`}</span>
+                        date: <span class="card__date-status">${!isDateShowing ? `no` : `yes`}</span>
                       </button>
 
                       <fieldset class="card__date-deadline">
@@ -287,12 +291,17 @@ export default class TaskPopup extends AbstractSmartComponent {
     this._task = task;
     this._isDateShowing = !!task.dueDate;
     this._isRepeatingTask = Object.values(task.repeatingDays).some(Boolean);
+    this._isDateShowing = !this._isRepeatingTask;
     this._activeRepeatingDays = Object.assign({}, task.repeatingDays);
     this._currentDescription = task.description;
     this._submitClickHandler = null;
     this._flatpickr = null;
     this._deleteClickHandler = null;
     this._subscribeOnEvents();
+    this.getElement().querySelector(`#color-${this._task.color}-4`).checked = true;
+    if (this._isDateShowing) {
+      this._applyFlatpickr();
+    }
   }
 
   getTemplate() {
@@ -335,6 +344,7 @@ export default class TaskPopup extends AbstractSmartComponent {
 
   rerender() {
     super.rerender();
+    this.getElement().querySelector(`#color-${this._task.color}-4`).checked = true;
     this._applyFlatpickr();
   }
 
@@ -356,25 +366,44 @@ export default class TaskPopup extends AbstractSmartComponent {
     }
   }
 
+  _disableSaveButton(isDisabled) {
+    const saveButton = this.getElement().querySelector(`.card__save`);
+    saveButton.disabled = isDisabled;
+  }
+
   _subscribeOnEvents() {
     const element = this.getElement();
+
+    element.querySelector(`.card__colors-wrap`)
+      .addEventListener(`click`, (evt) => {
+        evt.preventDefault();
+        if (evt.target.tagName !== `LABEL`) {
+          return;
+        }
+        const color = evt.target.textContent;
+        this.getElement().classList.remove(`card--${this._task.color}`);
+        this._task.color = color;
+        this.getElement().classList.add(`card--${color}`);
+        this.getElement().querySelector(`#color-${color}-4`).checked = true;
+      });
 
     element.querySelector(`.card__text`)
       .addEventListener(`input`, (evt) => {
         this._currentDescription = evt.target.value;
-        const saveButton = this.getElement().querySelector(`.card__save`);
-        saveButton.disabled = !isAllowableDescriptionLength(this._currentDescription);
+        this._disableSaveButton(!isAllowableDescriptionLength(this._currentDescription));
       });
 
     element.querySelector(`.card__date-deadline-toggle`)
       .addEventListener(`click`, () => {
         this._isDateShowing = !this._isDateShowing;
+        this._isRepeatingTask = !this._isDateShowing;
         this.rerender();
       });
 
     element.querySelector(`.card__repeat-toggle`)
       .addEventListener(`click`, () => {
         this._isRepeatingTask = !this._isRepeatingTask;
+        this._isDateShowing = !this.isRepeatingTask;
         this.rerender();
       });
 
@@ -383,6 +412,7 @@ export default class TaskPopup extends AbstractSmartComponent {
       repeatDays.addEventListener(`change`, (evt) => {
         this._activeRepeatingDays[evt.target.value] = evt.target.checked;
         this.rerender();
+        this._disableSaveButton(!Object.values(this._activeRepeatingDays).some(Boolean));
       });
     }
   }
