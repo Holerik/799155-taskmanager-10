@@ -3,7 +3,7 @@
 import {renderElement, RenderPosition, replace, remove} from '../utils.js';
 import TaskComponent from '../components/task.js';
 import TaskPopupComponent from '../components/task-edit.js';
-import {COLOR, TaskObject as Task, parseFormData} from '../data.js';
+import {TaskObject as Task, parseFormData} from '../data.js';
 
 export const Mode = {
   ADDING: `adding`,
