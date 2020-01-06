@@ -1,12 +1,13 @@
 // task.js
 
-import {months, getMinutes, dateFormatter} from '../data.js';
+import he from 'he';
+import {isOverdueDate} from '../date.js';
+import {months, getMinutes} from '../data.js';
 import AbstractComponent from './abstract.js';
 
 const checkTaskIsDead = (task) => {
-  // let currDate = new Date();
-  // return currDate.getTime() > task.dueDate.getTime();
-  return dateFormatter.compare(task.dueDate) === false;
+  const currDate = new Date();
+  return isOverdueDate(task.dueDate, currDate);
 };
 
 const getTagTemplate = (tag) => {
@@ -35,10 +36,9 @@ const createTagsTemplate = (task) => {
 };
 
 const createTaskTemplate = (task) => {
-  const values = Object.values(task);
-  let repeatStatus = values.some((value) => {
-    return value;
-  });
+  const description = he.encode(task.description);
+  let repeatStatus = Object.values(task.repeatingDays).some(Boolean);
+
   return (
     `          <article class="card card--${task.color} ${repeatStatus ? `card--repeat` : ``} ${checkTaskIsDead(task) ? `card--deadline` : ``}">
            <div class="card__form">
@@ -64,7 +64,7 @@ const createTaskTemplate = (task) => {
                 </div>
 
                <div class="card__textarea-wrap">
-                 <p class="card__text">${task.description}</p>
+                 <p class="card__text">${description}</p>
                </div>
 
                <div class="card__settings">
@@ -90,6 +90,10 @@ export default class Task extends AbstractComponent {
   constructor(task) {
     super();
     this._task = task;
+  }
+
+  get id() {
+    return this._task.id;
   }
 
   getTemplate() {

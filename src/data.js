@@ -1,6 +1,7 @@
 // data.js
 
 import {FilterType} from './components/filter.js';
+import moment from 'moment';
 
 export const months = [`Января`, `Февраля`, `Марта`, `Апреля`, `Мая`, `Июня`, `Июля`, `Августа`,
   `Сентября`, `Октября`, `Ноября`, `Декабря`];
@@ -91,8 +92,27 @@ const getRandomBolean = () => {
   return Math.floor(Math.random() * 2) > 0;
 };
 
+const EmptyTask = {
+  description: ``,
+  dueDate: new Date(),
+  repeatingDays: {
+    'mo': false,
+    'tu': false,
+    'we': false,
+    'th': false,
+    'fr': false,
+    'sa': false,
+    'su': false,
+  },
+  tags: [],
+  color: COLOR.BLACK,
+  isFavorite: false,
+  isArchive: false,
+};
+
 export class TaskObject {
-  constructor() {
+  constructor(index) {
+    this.id = index;
     this.description = getRandomTaskDescription();
     this.dueDate = getRandomDate();
     this.repeatingDays = {
@@ -110,8 +130,17 @@ export class TaskObject {
     this.isArchive = getRandomBolean();
   }
 
+  static empty() {
+    return this.clone(EmptyTask);
+  }
+
   static clone(data) {
     const task = new TaskObject();
+    if (data.id === undefined) {
+      task.id = -1;
+    } else {
+      task.id = data[`id`];
+    }
     task.description = data[`description`];
     task.dueDate = data[`dueDate`];
     task.repeatingDays = data[`repeatingDays`];
@@ -127,21 +156,12 @@ export const taskObjectsArray = [];
 
 export const filtersArray = [];
 
-export const updateTask = (oldTask, newTask) => {
-  const index = taskObjectsArray.findIndex((task) => task === oldTask);
-  if (index === -1) {
-    return false;
-  }
-  taskObjectsArray = [].concat(taskObjectsArray.slice(0, index), newTask, taskObjectsArray.slice(index + 1));
-  return true;
-};
-
 const TASKS_COUNT = 12;
 
 export const TASKS_PER_PAGE = 8;
 
 for (let i = 0; i < TASKS_COUNT; i++) {
-  taskObjectsArray.push(new TaskObject());
+  taskObjectsArray.push(new TaskObject(i));
 }
 
 const getArchiveTasks = (tasks) => {
@@ -157,11 +177,13 @@ const getFavoriteTasks = (tasks) => {
 };
 
 const isOneDay = (date1, date2) => {
-  return date1.getDate() === date2.getDate();
+  const d1 = moment(date1);
+  const d2 = moment(date2);
+  return d1.diff(d2, `days`) === 0 && date1.getDate() === date2.getDate();
 };
 
 const isOverdueDate = (dueDate, date) => {
-  return dueDate < date;
+  return dueDate < date && !isOneDay(dueDate, date);
 };
 
 const getOverdueTasks = (tasks, date) => {
@@ -197,7 +219,7 @@ export const getTasksByFilter = (tasks, filterType) => {
 
   switch (filterType) {
     case FilterType.ALL:
-      return tasks;// getNotArchiveTasks(tasks);
+      return getNotArchiveTasks(tasks); // Array.from(tasks);
     case FilterType.ARCHIVE:
       return getArchiveTasks(tasks);
     case FilterType.FAVORITES:
@@ -228,10 +250,30 @@ for (let title of Object.values(FilterType)) {
   filtersArray.push(filter);
 }
 
+export const parseFormData = (formData) => {
+  const repeatingDays = [`mo`, `tu`, `we`, `th`, `fr`, `sa`, `su`].reduce((acc, day) => {
+    acc[day] = false;
+    return acc;
+  }, {});
+  const date = formData.get(`date`);
+  return {
+    description: formData.get(`text`),
+    color: formData.get(`color`),
+    tags: formData.getAll(`hashtag`),
+    dueDate: date ? new Date(date) : new Date(),
+    repeatingDays: formData.getAll(`repeat`).reduce((acc, it) => {
+      acc[it] = true;
+      return acc;
+    }, repeatingDays)
+  };
+};
+
 export class Model {
   constructor() {
     this._tasks = [];
     this._currentFilterType = FilterType.ALL;
+    this._dataChangeHandlers = [];
+    this._filterChangeHandlers = [];
   }
 
   getTasks() {
@@ -244,22 +286,55 @@ export class Model {
 
   setTasks(tasks) {
     this._tasks = Array.from(tasks);
+    this._callHandlers(this._dataChangeHandlers);
   }
 
   setFilterType(filterType) {
     this._currentFilterType = filterType;
+    this._callHandlers(this._filterChangeHandlers);
   }
 
   updateTask(oldTask, newTask) {
-    const index = this._tasks.findIndex((task) => task === oldTask);
+    const index = this._tasks.findIndex((task) => task.id === oldTask.id);
     if (index === -1) {
       return false;
     }
     this._tasks = [].concat(this._tasks.slice(0, index), newTask, this._tasks.slice(index + 1));
+    this._callHandlers(this._dataChangeHandlers);
     return true;
   }
+
+  removeTask(id) {
+    const index = this._tasks.findIndex((task) => task.id === id);
+    if (index === -1) {
+      return false;
+    }
+    this._tasks = [].concat(this._tasks.slice(0, index), this._tasks.slice(index + 1));
+    this._callHandlers(this._dataChangeHandlers);
+    return true;
+  }
+
+  addTask(newTask) {
+    if (newTask.id === -1) {
+      let maxId = 0;
+      this._tasks.forEach((task) => {
+        maxId = Math.max(maxId, task.id);
+      });
+      newTask.id = maxId + 1;
+    }
+    this._tasks = [].concat(newTask, this._tasks);
+    this._callHandlers(this._dataChangeHandlers);
+  }
+
+  _callHandlers(handlers) {
+    handlers.forEach((handler) => handler());
+  }
+
+  setFilterChangeHandler(handler) {
+    this._filterChangeHandlers.push(handler);
+  }
+
+  setDataChangeHandler(handler) {
+    this._dataChangeHandlers.push(handler);
+  }
 }
-
-export const tasksModel = new Model();
-
-tasksModel.setTasks(taskObjectsArray);

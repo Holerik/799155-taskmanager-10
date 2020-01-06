@@ -3,32 +3,13 @@
 import {renderElement, RenderPosition, replace, remove} from '../utils.js';
 import TaskComponent from '../components/task.js';
 import TaskPopupComponent from '../components/task-edit.js';
-import {COLOR, TaskObject as Task} from '../data.js';
+import {TaskObject as Task, parseFormData} from '../data.js';
 
 export const Mode = {
   ADDING: `adding`,
   DEFAULT: `default`,
   EDIT: `edit`,
 };
-
-export const EmptyTask = {
-  description: ``,
-  dueDate: null,
-  repeatingDays: {
-    'mo': false,
-    'tu': false,
-    'we': false,
-    'th': false,
-    'fr': false,
-    'sa': false,
-    'su': false,
-  },
-  tags: [],
-  color: COLOR.BLACK,
-  isFavorite: false,
-  isArchive: false,
-};
-
 
 export default class TaskController {
   constructor(container, dataChangeHandler, viewChangeHandler) {
@@ -60,7 +41,7 @@ export default class TaskController {
 
     if (isEscKey) {
       if (this._mode === Mode.ADDING) {
-        this._dataChangeHandler(this, EmptyTask, null);
+        this._dataChangeHandler(this, Task.empty(), null);
       }
       this._taskEditComponent.reset();
       this._replaceEditToTask();
@@ -93,9 +74,20 @@ export default class TaskController {
     });
 
     this._taskEditComponent.setSubmitHandler(() => {
-      const newTask = Task.clone(task);
-      this._dataChangeHandler(this, task, newTask);
+      const formData = new FormData(this._taskEditComponent.getElement().querySelector(`.card__form`));
+      const data = parseFormData(formData);
+      const newTask = Task.clone(data);
+      if (this._mode === Mode.ADDING) {
+        this._dataChangeHandler(this, null, newTask);
+      } else {
+        newTask.id = task.id;
+        this._dataChangeHandler(this, task, newTask);
+      }
       this._replaceEditToTask();
+    });
+
+    this._taskEditComponent.setDeleteButtonClickHandler(() => {
+      this._dataChangeHandler(this, task, null);
     });
 
     switch (mode) {
