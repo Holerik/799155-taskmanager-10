@@ -6,7 +6,7 @@ import {createElement} from '../utils.js';
 export const SiteMenuItems = {
   ADD: `+ add new task`,
   TASKS: `tasks`,
-  SATATISTICS: `statistics`
+  STATISTICS: `statistics`
 };
 
 const createSiteMenuTemplate = () => {
@@ -65,6 +65,7 @@ export default class SiteMenu extends AbstractComponent {
     this._currentSiteMenuItem = items[items.findIndex((item) => menuItem.toLowerCase().indexOf(item) > -1)];
     if (this._siteMenuChangeHandler) {
       this._siteMenuChangeHandler(this._currentSiteMenuItem);
+      this._setActiveMenuItem(menuItem);
     }
   }
 
@@ -78,5 +79,17 @@ export default class SiteMenu extends AbstractComponent {
 
   setSiteMenuChangeHandler(handler) {
     this._siteMenuChangeHandler = handler;
+  }
+
+  _setActiveMenuItem(menuItem) {
+    const menuMap = {
+      [SiteMenuItems.ADD]: `new-task`,
+      [SiteMenuItems.TASKS]: `task`,
+      [SiteMenuItems.STATISTICS]: `statistic`,
+    };
+    const item = this.getElement().querySelector(`#control__${menuMap[menuItem.toLowerCase()]}`);
+    if (item) {
+      item.checked = true;
+    }
   }
 }

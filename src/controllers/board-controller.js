@@ -2,7 +2,6 @@
 
 import NoTasksComponent from '../components/no-tasks.js';
 import {SortType} from '../components/sort.js';
-import {SiteMenuItems} from '../components/site-menu.js';
 import MoreButtonComponent from '../components/more-button.js';
 import {renderElement, RenderPosition, remove} from '../utils.js';
 import {TASKS_PER_PAGE, TaskObject as Task} from '../data.js';
@@ -10,10 +9,9 @@ import TaskController, {Mode} from '../controllers/task-controller';
 import {FilterType} from '../components/filter.js';
 
 export default class BoardController {
-  constructor(tasks, container, siteMenuComponent, sortComponent) {
+  constructor(tasks, container, sortComponent) {
     this._tasks = tasks;
     this._container = container;
-    this._siteMenuComponent = siteMenuComponent;
     this._sortComponent = sortComponent;
     this._moreButtonComponent = new MoreButtonComponent();
     this._lastRenderedTask = 0;
@@ -31,8 +29,6 @@ export default class BoardController {
     this._currentFilterType = FilterType.ALL;
     this._filterChangeHandler = this._filterChangeHandler.bind(this);
     this._tasks.setFilterChangeHandler(this._filterChangeHandler);
-    this._siteMenuChangeHandler = this._siteMenuChangeHandler.bind(this);
-    this._siteMenuComponent.setSiteMenuChangeHandler(this._siteMenuChangeHandler);
   }
 
   setFilterType(filter) {
@@ -43,12 +39,14 @@ export default class BoardController {
     this._currentFilterType = filter;
   }
 
-  _createTask() {
+  createTask() {
     if (this._createdTaskController) {
       return false;
     }
+    this._viewChangeHandler();
     this._createdTaskController = new TaskController(this._taskListElement, this._dataChangeHandler, this._viewChangeHandler);
     this._createdTaskController.render(Task.empty(), Mode.ADDING);
+    this._showedTaskControllers.unshift(this._createdTaskController);
     return true;
   }
 
@@ -143,23 +141,6 @@ export default class BoardController {
     this._renderTaskElements();
   }
 
-  _siteMenuChangeHandler(menuItem) {
-    switch (menuItem) {
-      case SiteMenuItems.TASKS:
-        this._viewChangeHandler();
-        this._removeAddedTask();
-        this._renderTaskElements();
-        break;
-      case SiteMenuItems.ADD:
-        this._viewChangeHandler();
-        if (this._createTask()) {
-          this._showedTaskControllers.unshift(this._createdTaskController);
-        }
-        break;
-      case SiteMenuItems.SATATISTICS:
-        break;
-    }
-  }
   // рисуем содержимое контроллера
   render() {
     const isAllTasksArchived = this._tasks.getTasksAll().every((task) => task.isArchive);
@@ -169,5 +150,16 @@ export default class BoardController {
       this._renderTaskElements(TASKS_PER_PAGE);
       renderElement(this._container.getElement(), this._moreButtonComponent, RenderPosition.BEFOREEND);
     }
+  }
+
+  hide() {
+    this._container.hide();
+  }
+
+  show() {
+    this._container.show();
+    this._viewChangeHandler();
+    this._removeAddedTask();
+    this._renderTaskElements();
   }
 }
