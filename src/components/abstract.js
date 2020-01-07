@@ -1,6 +1,8 @@
 // abstract.js
 import {createElement} from '../utils.js';
 
+const HIDDEN_CLASS = `visually-hidden`;
+
 export default class AbstractComponent {
   constructor() {
     if (new.target === AbstractComponent) {
@@ -22,5 +24,21 @@ export default class AbstractComponent {
 
   removeElement() {
     this._element = null;
+  }
+
+  show() {
+    if (this.getElement()) {
+      this._element.classList.remove(HIDDEN_CLASS);
+    }
+  }
+
+  hide() {
+    if (this._element) {
+      if (this._element.classList.contains(HIDDEN_CLASS)) {
+        return;
+      } else {
+        this._element.classList.add(HIDDEN_CLASS);
+      }
+    }
   }
 }
