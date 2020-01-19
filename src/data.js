@@ -1,7 +1,8 @@
+/* eslint-disable camelcase */
 // data.js
 
 import {FilterType} from './components/filter.js';
-import moment from 'moment';
+import {isOneDay, isOverdueDate} from './date.js';
 
 export const months = [`Января`, `Февраля`, `Марта`, `Апреля`, `Мая`, `Июня`, `Июля`, `Августа`,
   `Сентября`, `Октября`, `Ноября`, `Декабря`];
@@ -12,57 +13,12 @@ export const getMinutes = (date) => {
   return minutes;
 };
 
-const taskDescriptions = [`Изучить теорию`, `Сделать домашку`, `Пройти интенсив на соточку`];
-
-const getRandomTaskDescription = () => {
-  return taskDescriptions[Math.floor(Math.random() * taskDescriptions.length)];
-};
-
-const tagsList = [`homework`, `theory`, `practice`, `intensive`, `keks`, `frontend`];
-
-const getRandomTag = () => {
-  return tagsList[Math.floor(Math.random() * tagsList.length)];
-};
-
-const getRandomTagsList = (listSize) => {
-  let list = new Set();
-  while (list.size < listSize) {
-    const randomTag = getRandomTag();
-    list.add(randomTag);
-  }
-  if (listSize === 0) {
-    list.add(``);
-  }
-  return list;
-};
-
 export const COLOR = {
   BLACK: `black`,
   YELLOW: `yellow`,
   BLUE: `blue`,
   GREEN: `green`,
   PINK: `pink`,
-};
-
-const getRandomCardColor = () => {
-  const colors = Object.values(COLOR);
-  return colors[Math.floor(Math.random() * colors.length)];
-};
-
-const getRandomDate = () => {
-  let date = new Date();
-  let year = date.getFullYear();
-  let month = date.getMonth();
-  let day = date.getDate();
-  let hours = date.getHours();
-  let delta = Math.floor(Math.random() * 7);
-  if (delta > 3) {
-    day += delta;
-  } else {
-    day -= delta;
-  }
-  date = new Date(year, month, day, hours);
-  return date;
 };
 
 export const dateFormatter = {
@@ -88,14 +44,11 @@ export const dateFormatter = {
   }
 };
 
-const getRandomBolean = () => {
-  return Math.floor(Math.random() * 2) > 0;
-};
 
 const EmptyTask = {
   description: ``,
-  dueDate: new Date(),
-  repeatingDays: {
+  due_date: (new Date()).toISOString(),
+  repeating_days: {
     'mo': false,
     'tu': false,
     'we': false,
@@ -106,63 +59,53 @@ const EmptyTask = {
   },
   tags: [],
   color: COLOR.BLACK,
-  isFavorite: false,
-  isArchive: false,
+  is_favorite: false,
+  is_archived: false,
 };
 
 export class TaskObject {
-  constructor(index) {
-    this.id = index;
-    this.description = getRandomTaskDescription();
-    this.dueDate = getRandomDate();
-    this.repeatingDays = {
-      'mo': false,
-      'tu': false,
-      'we': false,
-      'th': false,
-      'fr': getRandomBolean(),
-      'sa': false,
-      'su': false
-    };
-    this.tags = getRandomTagsList(Math.floor(Math.random() * 3));
-    this.color = getRandomCardColor();
-    this.isFavorite = getRandomBolean();
-    this.isArchive = getRandomBolean();
+  constructor(data) {
+    if (data.id === undefined) {
+      this.id = -1;
+    } else {
+      this.id = data[`id`];
+    }
+    this.description = data[`description`];
+    this.dueDate = new Date(data[`due_date`]);
+    this.repeatingDays = data[`repeating_days`];
+    this.tags = new Set(data[`tags`]);
+    this.color = data[`color`];
+    this.isFavorite = Boolean(data[`is_favorite`]);
+    this.isArchive = Boolean(data[`is_archived`]);
+  }
+
+  static parse(data) {
+    return new TaskObject(data);
   }
 
   static empty() {
-    return this.clone(EmptyTask);
+    return new TaskObject(EmptyTask);
   }
 
-  static clone(data) {
-    const task = new TaskObject();
-    if (data.id === undefined) {
-      task.id = -1;
-    } else {
-      task.id = data[`id`];
-    }
-    task.description = data[`description`];
-    task.dueDate = data[`dueDate`];
-    task.repeatingDays = data[`repeatingDays`];
-    task.tags = new Set(data[`tags`]);
-    task.color = data[`color`];
-    task.isFavorite = Boolean(data[`isFavorite`]);
-    task.isArchive = Boolean(data[`isArchive`]);
-    return task;
+  static clone(task) {
+    return new TaskObject(task.raw());
+  }
+
+  raw() {
+    return {
+      'id': this.id,
+      'description': this.description,
+      'due_date': this.dueDate.toISOString(),
+      'tags': Array.from(this.tags),
+      'repeating_days': this.repeatingDays,
+      'color': this.color,
+      'is_favorite': this.isFavorite,
+      'is_archived': this.isArchive,
+    };
   }
 }
-
-export const taskObjectsArray = [];
-
-export const filtersArray = [];
-
-const TASKS_COUNT = 12;
 
 export const TASKS_PER_PAGE = 8;
-
-for (let i = 0; i < TASKS_COUNT; i++) {
-  taskObjectsArray.push(new TaskObject(i));
-}
 
 const getArchiveTasks = (tasks) => {
   return tasks.filter((task) => task.isArchive);
@@ -174,16 +117,6 @@ const getNotArchiveTasks = (tasks) => {
 
 const getFavoriteTasks = (tasks) => {
   return tasks.filter((task) => task.isFavorite);
-};
-
-const isOneDay = (date1, date2) => {
-  const d1 = moment(date1);
-  const d2 = moment(date2);
-  return d1.diff(d2, `days`) === 0 && date1.getDate() === date2.getDate();
-};
-
-const isOverdueDate = (dueDate, date) => {
-  return dueDate < date && !isOneDay(dueDate, date);
 };
 
 const getOverdueTasks = (tasks, date) => {
@@ -241,13 +174,8 @@ export class FilterObject {
   constructor(title) {
     this.title = title;
     this.isChecked = false;
-    this.count = getTasksByFilter(taskObjectsArray, title).length;
+    this.count = 0;
   }
-}
-
-for (let title of Object.values(FilterType)) {
-  const filter = new FilterObject(title);
-  filtersArray.push(filter);
 }
 
 export const parseFormData = (formData) => {
@@ -260,8 +188,8 @@ export const parseFormData = (formData) => {
     description: formData.get(`text`),
     color: formData.get(`color`),
     tags: formData.getAll(`hashtag`),
-    dueDate: date ? new Date(date) : new Date(),
-    repeatingDays: formData.getAll(`repeat`).reduce((acc, it) => {
+    due_date: date ? new Date(date) : new Date(),
+    repeating_days: formData.getAll(`repeat`).reduce((acc, it) => {
       acc[it] = true;
       return acc;
     }, repeatingDays)

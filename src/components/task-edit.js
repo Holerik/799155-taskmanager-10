@@ -17,12 +17,43 @@ const isAllowableDescriptionLength = (description) => {
     length <= MAX_DESCRIPTION_LENGTH;
 };
 
+
+const createTagTemplate = (tag) => {
+  return (`
+                        <span class="card__hashtag-inner">
+                          <input
+                            type="hidden"
+                            name="hashtag"
+                            value="${tag}"
+                            class="card__hashtag-hidden-input"
+                          />
+                          <p class="card__hashtag-name">
+                            #${tag}
+                          </p>
+                          <button type="button" class="card__hashtag-delete">
+                            delete
+                          </button>
+                        </span>
+  `);
+};
+
+const createTagsTemplate = (task) => {
+  let element = `                      <div class="card__hashtag-list">
+`;
+  for (let tag of task.tags) {
+    element += createTagTemplate(tag);
+  }
+  element +=
+`           </div>`;
+  return element;
+};
+
 const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays) => {
   const date = (isDateShowing && task.dueDate) ? formatDate(task.dueDate) : ``;
   const time = (isDateShowing && task.dueDate) ? formatTime(task.dueDate) : ``;
   const description = he.encode(task.description);
 
-  return (
+  let element =
     `          <article class="card__edit card--edit card--${task.color} ${isRepeatingTask ? `card--repeat` : ``}">
             <form class="card__form" method="get">
               <div class="card__inner">
@@ -148,64 +179,10 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                       </fieldset>
                     </div>
 
-                    <div class="card__hashtag">
-                      <div class="card__hashtag-list">
-                        <span class="card__hashtag-inner">
-                          <input
-                            type="hidden"
-                            name="hashtag"
-                            value="repeat"
-                            class="card__hashtag-hidden-input"
-                          />
-                          <p class="card__hashtag-name">
-                            #repeat
-                          </p>
-                          <button type="button" class="card__hashtag-delete">
-                            delete
-                          </button>
-                        </span>
-
-                        <span class="card__hashtag-inner">
-                          <input
-                            type="hidden"
-                            name="hashtag"
-                            value="repeat"
-                            class="card__hashtag-hidden-input"
-                          />
-                          <p class="card__hashtag-name">
-                            #cinema
-                          </p>
-                          <button type="button" class="card__hashtag-delete">
-                            delete
-                          </button>
-                        </span>
-
-                        <span class="card__hashtag-inner">
-                          <input
-                            type="hidden"
-                            name="hashtag"
-                            value="repeat"
-                            class="card__hashtag-hidden-input"
-                          />
-                          <p class="card__hashtag-name">
-                            #entertaiment
-                          </p>
-                          <button type="button" class="card__hashtag-delete">
-                            delete
-                          </button>
-                        </span>
-                      </div>
-
-                      <label>
-                        <input
-                          type="text"
-                          class="card__hashtag-input"
-                          name="hashtag-input"
-                          placeholder="Type new hashtag here"
-                        />
-                      </label>
-                    </div>
-                  </div>
+                    <div class="card__hashtag">`;
+  element += createTagsTemplate(task);
+  element +=
+`                  </div>
 
                   <div class="card__colors-inner">
                     <h3 class="card__colors-title">Color</h3>
@@ -281,8 +258,8 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                 </div>
               </div>
             </form>
-          </article>`
-  );
+          </article>`;
+  return element;
 };
 
 export default class TaskPopup extends AbstractSmartComponent {
@@ -331,6 +308,7 @@ export default class TaskPopup extends AbstractSmartComponent {
 
   recoveryListeners() {
     this.setSubmitHandler(this._submitClickHandler);
+    this.setDeleteButtonClickHandler(this._deleteClickHandler);
     this._subscribeOnEvents();
   }
 
@@ -373,6 +351,20 @@ export default class TaskPopup extends AbstractSmartComponent {
 
   _subscribeOnEvents() {
     const element = this.getElement();
+
+    const elements = element.querySelectorAll(`.card__hashtag-delete`);
+    for (let item of elements) {
+      item.addEventListener(`click`, (evt) => {
+        const targetTag = evt.target.parentNode.querySelector(`.card__hashtag-name`).textContent;
+        for (let tag of this._task.tags) {
+          if (targetTag.indexOf(tag) > -1) {
+            this._task.tags.delete(tag);
+            this.rerender();
+            break;
+          }
+        }
+      });
+    }
 
     element.querySelector(`.card__colors-wrap`)
       .addEventListener(`click`, (evt) => {
