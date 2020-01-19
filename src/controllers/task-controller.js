@@ -76,7 +76,12 @@ export default class TaskController {
     this._taskEditComponent.setSubmitHandler(() => {
       const formData = new FormData(this._taskEditComponent.getElement().querySelector(`.card__form`));
       const data = parseFormData(formData);
-      const newTask = Task.clone(data);
+      data.id = task.id;
+      // eslint-disable-next-line camelcase
+      data.is_favorite = task.isFavorite;
+      // eslint-disable-next-line camelcase
+      data.is_archived = task.isArchive;
+      const newTask = Task.parse(data);
       if (this._mode === Mode.ADDING) {
         this._dataChangeHandler(this, null, newTask);
       } else {

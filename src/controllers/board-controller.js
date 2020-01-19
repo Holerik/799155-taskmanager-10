@@ -1,5 +1,6 @@
 // board-controller.js
 
+import {errorHandle} from '../api.js';
 import NoTasksComponent from '../components/no-tasks.js';
 import {SortType} from '../components/sort.js';
 import MoreButtonComponent from '../components/more-button.js';
@@ -9,8 +10,9 @@ import TaskController, {Mode} from '../controllers/task-controller';
 import {FilterType} from '../components/filter.js';
 
 export default class BoardController {
-  constructor(tasks, container, sortComponent) {
-    this._tasks = tasks;
+  constructor(api, model, container, sortComponent) {
+    this._api = api;
+    this._tasks = model;
     this._container = container;
     this._sortComponent = sortComponent;
     this._moreButtonComponent = new MoreButtonComponent();
@@ -99,14 +101,19 @@ export default class BoardController {
       this._createdTaskController = null;
       this._tasks.addTask(newTask);
       this._renderTaskElements();
-    } else { // обновляем task
-      if (this._tasks.updateTask(oldTask, newTask)) {
-        if (newTask.isArchive !== oldTask.isArchive) {
-          this._renderTaskElements();
-        } else {
-          taskController.render(newTask, Mode.DEFAULT);
+    } else {
+      // обновляем на сервере
+      this._api.updateTask(oldTask.id, newTask)
+      .then((updTask) => { // обновляем task в модели
+        if (this._tasks.updateTask(oldTask, updTask)) {
+          if (updTask.isArchive !== oldTask.isArchive) {
+            this._renderTaskElements();
+          } else {
+            taskController.render(updTask, Mode.DEFAULT);
+          }
         }
-      }
+      })
+      .catch(errorHandle);
     }
   }
 
@@ -132,7 +139,7 @@ export default class BoardController {
     });
 
     length = this._showedTaskControllers.length;
-    if (tasksRenderArray.length === this._lastRenderedTask) {
+    if (tasksRenderArray.length === this._currentLastRenderedTask) {
       this._removeMoreButton();
     }
   }
@@ -147,8 +154,8 @@ export default class BoardController {
     if (isAllTasksArchived || (this._tasks.getTasksAll().length === 0)) {
       renderElement(this._container.getElement(), new NoTasksComponent(), RenderPosition.BEFOREEND);
     } else {
-      this._renderTaskElements(TASKS_PER_PAGE);
       renderElement(this._container.getElement(), this._moreButtonComponent, RenderPosition.BEFOREEND);
+      this._renderTaskElements(TASKS_PER_PAGE);
     }
   }
 
