@@ -5,6 +5,8 @@ import TaskComponent from '../components/task.js';
 import TaskPopupComponent from '../components/task-edit.js';
 import {TaskObject as Task, parseFormData} from '../data.js';
 
+const SHAKE_ANIMATION_TIMEOUT = 600;
+
 export const Mode = {
   ADDING: `adding`,
   DEFAULT: `default`,
@@ -74,6 +76,10 @@ export default class TaskController {
     });
 
     this._taskEditComponent.setSubmitHandler(() => {
+      this.enableRedShadow(false);
+      this._taskEditComponent.setButtonText({
+        saveButtonText: `Saving...`,
+      });
       const formData = new FormData(this._taskEditComponent.getElement().querySelector(`.card__form`));
       const data = parseFormData(formData);
       data.id = task.id;
@@ -88,10 +94,15 @@ export default class TaskController {
         newTask.id = task.id;
         this._dataChangeHandler(this, task, newTask);
       }
-      this._replaceEditToTask();
+      if (!(this._taskEditComponent.getElement().classList.contains(`card--deadline`))) {
+        this._replaceEditToTask();
+      }
     });
 
     this._taskEditComponent.setDeleteButtonClickHandler(() => {
+      this._taskEditComponent.setButtonText({
+        deleteButtonText: `Deleting...`,
+      });
       this._dataChangeHandler(this, task, null);
     });
 
@@ -126,6 +137,38 @@ export default class TaskController {
     if (this._mode !== Mode.DEFAULT) {
       this._taskEditComponent.reset();
       this._replaceEditToTask();
+    }
+  }
+
+  shake() {
+    this._taskEditComponent.getElement().style.animation = `shake ${SHAKE_ANIMATION_TIMEOUT / 1000}s`;
+    this._taskComponent.getElement().style.animation = `shake ${SHAKE_ANIMATION_TIMEOUT / 1000}s`;
+
+    setTimeout(() => {
+      this._taskEditComponent.getElement().style.animation = ``;
+      this._taskComponent.getElement().style.animation = ``;
+
+      this._taskEditComponent.setButtonText({
+        saveButtonText: `Save`,
+        deleteButtonText: `Delete`,
+      });
+      this.disableButtons(false);
+    }, SHAKE_ANIMATION_TIMEOUT);
+  }
+
+  disableButtons(disable) {
+    this._taskEditComponent.disableSaveButton(disable);
+    this._taskEditComponent.disableDeleteButton(disable);
+  }
+
+  enableRedShadow(enable) {
+    const element = this._taskEditComponent.getElement();
+    if (enable) {
+      element.classList.add(`card--deadline`);
+    } else {
+      if (element.classList.contains(`card--deadline`)) {
+        element.classList.remove(`card--deadline`);
+      }
     }
   }
 }

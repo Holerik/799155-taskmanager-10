@@ -1,6 +1,5 @@
 // task-edit.js
 
-import he from 'he';
 import AbstractSmartComponent from './abstract-smart.js';
 import {formatTime, formatDate} from '../date.js';
 import flatpickr from 'flatpickr';
@@ -15,6 +14,11 @@ const isAllowableDescriptionLength = (description) => {
 
   return length >= MIN_DESCRIPTION_LENGTH &&
     length <= MAX_DESCRIPTION_LENGTH;
+};
+
+const defaultButtonText = {
+  deleteButtonText: `Delete`,
+  saveButtonText: `Save`,
 };
 
 
@@ -48,10 +52,16 @@ const createTagsTemplate = (task) => {
   return element;
 };
 
-const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays) => {
+const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingDays, buttonText) => {
   const date = (isDateShowing && task.dueDate) ? formatDate(task.dueDate) : ``;
   const time = (isDateShowing && task.dueDate) ? formatTime(task.dueDate) : ``;
-  const description = he.encode(task.description);
+  const description = task.description;
+  const deleteButtonText = buttonText.deleteButtonText;
+  const saveButtonText = buttonText.saveButtonText;
+
+  const isSaveButtonBlocked = (isDateShowing && isRepeatingTask) ||
+    (isRepeatingTask && !Object.values(repeatingDays).some(Boolean)) ||
+    !isAllowableDescriptionLength(description);
 
   let element =
     `          <article class="card__edit card--edit card--${task.color} ${isRepeatingTask ? `card--repeat` : ``}">
@@ -253,8 +263,8 @@ const createTaskEditTemplate = (task, isDateShowing, isRepeatingTask, repeatingD
                 </div>
 
                 <div class="card__status-btns">
-                  <button class="card__save" type="submit">save</button>
-                  <button class="card__delete" type="button">delete</button>
+                  <button class="card__save" type="submit" ${isSaveButtonBlocked ? `disabled` : ``}>${saveButtonText}</button>
+                  <button class="card__delete" type="button">${deleteButtonText}</button>
                 </div>
               </div>
             </form>
@@ -274,16 +284,17 @@ export default class TaskPopup extends AbstractSmartComponent {
     this._submitClickHandler = null;
     this._flatpickr = null;
     this._deleteClickHandler = null;
-    this._subscribeOnEvents();
+    this._buttonText = defaultButtonText;
     this.getElement().querySelector(`#color-${this._task.color}-4`).checked = true;
     if (this._isDateShowing) {
       this._applyFlatpickr();
     }
+    this._subscribeOnEvents();
   }
 
   getTemplate() {
     return createTaskEditTemplate(this._task, this._isDateShowing,
-        this._isRepeatingTask, this._activeRepeatingDays);
+        this._isRepeatingTask, this._activeRepeatingDays, this._buttonText);
   }
 
   removeElement() {
@@ -324,6 +335,7 @@ export default class TaskPopup extends AbstractSmartComponent {
     super.rerender();
     this.getElement().querySelector(`#color-${this._task.color}-4`).checked = true;
     this._applyFlatpickr();
+    this.getElement().querySelector(`.card__text`).textContent = this._currentDescription;
   }
 
   _applyFlatpickr() {
@@ -344,9 +356,14 @@ export default class TaskPopup extends AbstractSmartComponent {
     }
   }
 
-  _disableSaveButton(isDisabled) {
+  disableSaveButton(disable) {
     const saveButton = this.getElement().querySelector(`.card__save`);
-    saveButton.disabled = isDisabled;
+    saveButton.disabled = disable === true;
+  }
+
+  disableDeleteButton(disable) {
+    const deleteButton = this.getElement().querySelector(`.card__delete`);
+    deleteButton.disabled = disable === true;
   }
 
   _subscribeOnEvents() {
@@ -382,7 +399,7 @@ export default class TaskPopup extends AbstractSmartComponent {
     element.querySelector(`.card__text`)
       .addEventListener(`input`, (evt) => {
         this._currentDescription = evt.target.value;
-        this._disableSaveButton(!isAllowableDescriptionLength(this._currentDescription));
+        this.disableSaveButton(!isAllowableDescriptionLength(this._currentDescription));
       });
 
     element.querySelector(`.card__date-deadline-toggle`)
@@ -404,8 +421,13 @@ export default class TaskPopup extends AbstractSmartComponent {
       repeatDays.addEventListener(`change`, (evt) => {
         this._activeRepeatingDays[evt.target.value] = evt.target.checked;
         this.rerender();
-        this._disableSaveButton(!Object.values(this._activeRepeatingDays).some(Boolean));
+        this.disableSaveButton(!Object.values(this._activeRepeatingDays).some(Boolean));
       });
     }
+  }
+
+  setButtonText(buttonText) {
+    this._buttonText = Object.assign({}, defaultButtonText, buttonText);
+    this.rerender();
   }
 }

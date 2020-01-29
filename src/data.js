@@ -1,6 +1,6 @@
-/* eslint-disable camelcase */
 // data.js
 
+import he from 'he';
 import {FilterType} from './components/filter.js';
 import {isOneDay, isOverdueDate} from './date.js';
 
@@ -47,7 +47,9 @@ export const dateFormatter = {
 
 const EmptyTask = {
   description: ``,
+  // eslint-disable-next-line camelcase
   due_date: (new Date()).toISOString(),
+  // eslint-disable-next-line camelcase
   repeating_days: {
     'mo': false,
     'tu': false,
@@ -59,15 +61,15 @@ const EmptyTask = {
   },
   tags: [],
   color: COLOR.BLACK,
+  // eslint-disable-next-line camelcase
   is_favorite: false,
+  // eslint-disable-next-line camelcase
   is_archived: false,
 };
 
 export class TaskObject {
   constructor(data) {
-    if (data.id === undefined) {
-      this.id = -1;
-    } else {
+    if (data.id !== undefined) {
       this.id = data[`id`];
     }
     this.description = data[`description`];
@@ -92,7 +94,7 @@ export class TaskObject {
   }
 
   raw() {
-    return {
+    const task = {
       'id': this.id,
       'description': this.description,
       'due_date': this.dueDate.toISOString(),
@@ -102,6 +104,7 @@ export class TaskObject {
       'is_favorite': this.isFavorite,
       'is_archived': this.isArchive,
     };
+    return task;
   }
 }
 
@@ -185,10 +188,12 @@ export const parseFormData = (formData) => {
   }, {});
   const date = formData.get(`date`);
   return {
-    description: formData.get(`text`),
+    description: he.encode(formData.get(`text`)),
     color: formData.get(`color`),
     tags: formData.getAll(`hashtag`),
+    // eslint-disable-next-line camelcase
     due_date: date ? new Date(date) : new Date(),
+    // eslint-disable-next-line camelcase
     repeating_days: formData.getAll(`repeat`).reduce((acc, it) => {
       acc[it] = true;
       return acc;
@@ -244,11 +249,7 @@ export class Model {
 
   addTask(newTask) {
     if (newTask.id === -1) {
-      let maxId = 0;
-      this._tasks.forEach((task) => {
-        maxId = Math.max(maxId, task.id);
-      });
-      newTask.id = maxId + 1;
+      newTask.id = this.getMaxId() + 1;
     }
     this._tasks = [].concat(newTask, this._tasks);
     this._callHandlers(this._dataChangeHandlers);

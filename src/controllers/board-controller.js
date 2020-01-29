@@ -1,6 +1,5 @@
 // board-controller.js
 
-import {errorHandle} from '../api.js';
 import NoTasksComponent from '../components/no-tasks.js';
 import {SortType} from '../components/sort.js';
 import MoreButtonComponent from '../components/more-button.js';
@@ -45,9 +44,10 @@ export default class BoardController {
     if (this._createdTaskController) {
       return false;
     }
+    const newTask = Task.empty();
     this._viewChangeHandler();
     this._createdTaskController = new TaskController(this._taskListElement, this._dataChangeHandler, this._viewChangeHandler);
-    this._createdTaskController.render(Task.empty(), Mode.ADDING);
+    this._createdTaskController.render(newTask, Mode.ADDING);
     this._showedTaskControllers.unshift(this._createdTaskController);
     return true;
   }
@@ -94,26 +94,47 @@ export default class BoardController {
       if (this._createdTaskController !== null) {
         this._removeAddedTask();
         this._renderTaskElements();
-      } else if (this._tasks.removeTask(oldTask.id)) { // удаляем task
-        this._renderTaskElements();
+      } else {
+        // пробуем удалить на сервере
+        taskController.disableButtons(true);
+        this._api.deleteTask(oldTask.id)
+        .then(() => {
+          // удаляем из модели
+          this._tasks.removeTask(oldTask.id);
+          this._renderTaskElements();
+        })
+        .catch(() => {
+          taskController.shake();
+        });
       }
-    } else if (oldTask === null) { // добавляем task
+    } else if (oldTask === null) {
       this._createdTaskController = null;
-      this._tasks.addTask(newTask);
-      this._renderTaskElements();
+      // пробуем добавить на сервере
+      taskController.disableButtons(true);
+      this._api.createTask(newTask)
+      .then((task) => {
+        // добавляем в модель
+        this._tasks.addTask(task);
+        this._renderTaskElements();
+      })
+      .catch(() => {
+        taskController.disableButtons(false);
+        taskController.enableRedShadow(true);
+        taskController.shake();
+      });
     } else {
       // обновляем на сервере
+      taskController.disableButtons(true);
       this._api.updateTask(oldTask.id, newTask)
       .then((updTask) => { // обновляем task в модели
-        if (this._tasks.updateTask(oldTask, updTask)) {
-          if (updTask.isArchive !== oldTask.isArchive) {
-            this._renderTaskElements();
-          } else {
-            taskController.render(updTask, Mode.DEFAULT);
-          }
-        }
+        this._tasks.updateTask(oldTask, updTask);
+        this._renderTaskElements();
       })
-      .catch(errorHandle);
+      .catch(() => {
+        taskController.disableButtons(false);
+        taskController.enableRedShadow(true);
+        taskController.shake();
+      });
     }
   }
 
